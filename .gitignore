@@ -1,0 +1,110 @@
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+*.egg-link
+.installed.cfg
+lib/
+lib64/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+.env.bak
+.env.local
+
+# ── SENSITIVE — never commit these ───────────────────
+.env
+backend/.env
+*.env
+secrets.json
+credentials.json
+*_key.json
+service_account*.json
+
+# ── Database files ────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+backend/athletiq.db
+backend/test.db
+
+# ── Uploaded videos / user data ───────────────────────
+backend/uploads/
+uploads/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# ── Logs ──────────────────────────────────────────────
+*.log
+logs/
+*.log.*
+
+# ── Node / Frontend ───────────────────────────────────
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.npm
+.yarn
+yarn-error.log
+package-lock.json
+
+# ── Vite / Build artifacts ────────────────────────────
+frontend/.vite/
+.vite/
+
+# ── Alembic ───────────────────────────────────────────
+# Keep migrations but ignore auto-generated pycache
+alembic/__pycache__/
+
+# ── OS & Editor ───────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# ── Testing ───────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ── Jupyter ───────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Misc ──────────────────────────────────────────────
+*.bak
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
