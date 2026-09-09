@@ -1,128 +1,177 @@
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Zap, Camera, Brain, Target, ChevronRight, Shield, TrendingUp } from 'lucide-react';
-
-const fade = (delay = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] },
-});
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import SportifyLogo from '../components/common/SportifyLogo';
+import {
+  VideoIcon,
+  CriticalIcon,
+  DumbbellIcon,
+  HeartPulseIcon,
+  TrendingUpIcon,
+  ArrowRightIcon,
+} from '../components/common/Icons';
 
 export default function Landing() {
+  const navigate = useNavigate();
+
+  // 5-Phase Athlete Development Loop
+  const productLoop = [
+    {
+      phase: '01',
+      title: 'ASSESS',
+      subtitle: 'Kinematic Capture',
+      desc: 'Video capture with precision joint tracking, camera framing reticles, and biomechanical calibration.',
+      icon: VideoIcon,
+      accent: 'text-sky-400',
+      badgeClass: 'bg-sky-500/10 border-sky-500/20 text-sky-300',
+    },
+    {
+      phase: '02',
+      title: 'IDENTIFY',
+      subtitle: 'Bottleneck Detection',
+      desc: 'Biomechanic algorithms pinpoint kinematic deficits and mobility limitations against role benchmarks.',
+      icon: CriticalIcon,
+      accent: 'text-rose-400',
+      badgeClass: 'bg-rose-500/10 border-rose-500/20 text-rose-300',
+    },
+    {
+      phase: '03',
+      title: 'TRAIN',
+      subtitle: 'Targeted Pathway',
+      desc: '4-week progressive overload plan targeting your exact deficit gaps and sport demands.',
+      icon: DumbbellIcon,
+      accent: 'text-amber-400',
+      badgeClass: 'bg-amber-500/10 border-amber-500/20 text-amber-300',
+    },
+    {
+      phase: '04',
+      title: 'RECOVER',
+      subtitle: 'Strain Restoration',
+      desc: 'Strain status tracking, daily habit checklists, and role-specific injury prevention prehab routines.',
+      icon: HeartPulseIcon,
+      accent: 'text-emerald-400',
+      badgeClass: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300',
+    },
+    {
+      phase: '05',
+      title: 'REASSESS',
+      subtitle: 'Track Improvement',
+      desc: 'Longitudinal movement deltas, trajectory tracking, and progressive adaptation validation.',
+      icon: TrendingUpIcon,
+      accent: 'text-white',
+      badgeClass: 'bg-white/10 border-white/20 text-white',
+    },
+  ];
+
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ background: '#000005' }}>
-      {/* Orb decorations */}
-      <div className="orb orb-blue w-[600px] h-[600px] top-[-15%] left-[50%] -translate-x-1/2 opacity-60" />
-      <div className="orb orb-green w-80 h-80 bottom-[-5%] left-[-5%] opacity-40" />
-      <div className="orb orb-purple w-64 h-64 top-[40%] right-[-5%] opacity-30" />
+    <div className="min-h-[100dvh] bg-[#07080C] text-[#F1F5F9] flex flex-col w-full selection:bg-white/20 relative overflow-x-hidden select-none">
+      {/* Subtle Specular Ambient Sheen */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-radial-gradient from-white/[0.04] via-slate-400/[0.01] to-transparent blur-3xl pointer-events-none" />
 
-      {/* Navbar */}
-      <nav className="glass-nav relative z-20 px-8 py-4 flex justify-between items-center max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary rounded-lg blur-md opacity-50" />
-            <Zap className="relative w-7 h-7 text-primary" />
-          </div>
-          <span className="font-black text-xl tracking-tight gradient-text-blue">ATHLETIQ</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/onboarding" className="btn-ghost py-2 px-5 text-sm">Log In</Link>
-          <Link to="/onboarding" className="btn-primary py-2 px-5 text-sm">Get Started</Link>
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <main className="relative z-10 max-w-5xl mx-auto px-6 pt-28 pb-32 text-center">
-        <motion.div {...fade(0)}>
-          <span className="badge badge-blue mb-6 inline-flex">
-            🏆 AI-Powered Athlete Development
-          </span>
-        </motion.div>
-
-        <motion.h1
-          {...fade(0.1)}
-          className="text-6xl md:text-8xl font-black tracking-tighter mb-6 leading-none"
-        >
-          <span className="gradient-text">Know Your Limit.</span>
-          <br />
-          <span className="gradient-text-blue">Break It.</span>
-        </motion.h1>
-
-        <motion.p {...fade(0.2)} className="text-lg md:text-xl text-white/40 max-w-2xl mx-auto mb-12 leading-relaxed">
-          Role-specific AI development plans built on biomechanical video analysis.
-          Train smarter for your exact sport and position.
-        </motion.p>
-
-        <motion.div {...fade(0.3)} className="flex flex-col sm:flex-row justify-center gap-4">
+      <div className="w-full max-w-5xl mx-auto min-h-[100dvh] flex flex-col justify-between p-4 sm:p-6 md:p-8 relative z-10">
+        {/* ── 1. HEADER ──────────────────────────────────────────────────────── */}
+        <header className="flex items-center justify-between pt-safe">
+          <Link to="/" className="focus:outline-none">
+            <SportifyLogo size="xs" showTagline={false} />
+          </Link>
           <Link
-            to="/onboarding"
-            className="btn-primary text-base py-4 px-10 rounded-2xl flex items-center justify-center gap-2"
+            to="/onboarding?mode=signin"
+            className="text-xs font-bold font-tech uppercase tracking-wider text-slate-300 hover:text-white px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all active:scale-95"
           >
-            Start Your Assessment <ChevronRight className="w-5 h-5" />
+            Sign In
           </Link>
-          <a
-            href="#features"
-            className="btn-ghost text-base py-4 px-10 rounded-2xl"
-          >
-            Learn More
-          </a>
-        </motion.div>
+        </header>
 
-        {/* Stats row */}
-        <motion.div {...fade(0.4)} className="flex justify-center gap-8 mt-20 text-center">
-          {[['14', 'Sport Roles'], ['7', 'Movement Metrics'], ['4-Week', 'AI Plan']].map(([val, label]) => (
-            <div key={label} className="glass px-6 py-4 rounded-2xl">
-              <div className="text-2xl font-black gradient-text-blue">{val}</div>
-              <div className="text-xs text-white/40 font-medium mt-0.5">{label}</div>
+        {/* ── 2. HERO SPLASH ─────────────────────────────────────────────────── */}
+        <main className="my-auto py-8 sm:py-12 flex flex-col items-center text-center">
+          {/* Brand Visual Emblem */}
+          <div className="mb-5 relative group">
+            <div className="absolute -inset-4 bg-gradient-to-b from-white/[0.08] to-transparent rounded-2xl blur-xl opacity-70" />
+            <SportifyLogo variant="hero" size="sm" />
+          </div>
+
+          {/* Pill Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-white text-[11px] font-tech font-bold uppercase tracking-wider mb-4 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+            <span>Role-Specific Athlete Development Platform</span>
+          </div>
+
+          {/* Impactful Headline */}
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold font-heading tracking-tight text-white uppercase leading-[1.1] mb-3 sm:mb-4 max-w-3xl">
+            Train for the exact demands{' '}
+            <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent block">
+              of your position.
+            </span>
+          </h1>
+
+          {/* Subtitle */}
+          <p className="text-xs sm:text-sm md:text-base text-slate-400 max-w-xl mx-auto font-sans leading-relaxed mb-8 sm:mb-10">
+            Sportify analyzes your movement kinematics, identifies performance bottlenecks, and generates a personalized training pathway.
+          </p>
+
+          {/* 5-Phase Core Product Loop */}
+          <div className="w-full text-left space-y-2 mb-8">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-bold font-tech uppercase tracking-[0.2em] text-slate-400">
+                The Continuous Development Loop
+              </span>
+              <span className="text-[10px] font-mono text-slate-500">5 Kinematic Phases</span>
             </div>
-          ))}
-        </motion.div>
-      </main>
 
-      {/* Features */}
-      <section id="features" className="relative z-10 max-w-6xl mx-auto px-6 pb-32">
-        <motion.h2
-          initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-          className="text-3xl font-black text-center mb-12 gradient-text"
-        >
-          Everything you need to level up
-        </motion.h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+              {productLoop.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.phase}
+                    className="p-3.5 rounded-xl bg-[#0F121C]/90 border border-white/[0.07] hover:border-white/20 transition-all flex flex-col justify-between shadow-[0_4px_16px_rgba(0,0,0,0.6)] group"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/10 flex items-center justify-center">
+                          <Icon className={`w-4 h-4 ${item.accent}`} />
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-slate-500">
+                          {item.phase}
+                        </span>
+                      </div>
+                      <h2 className="text-xs font-bold font-heading uppercase text-white tracking-wide">
+                        {item.title}
+                      </h2>
+                      <span className="text-[10px] font-tech text-slate-400 block mb-1.5 font-semibold">
+                        {item.subtitle}
+                      </span>
+                      <p className="text-[11px] text-slate-400/90 font-sans leading-relaxed">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </main>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {[
-            { icon: <Camera className="w-6 h-6 text-primary" />, color: 'primary', title: 'Video Analysis', desc: 'Upload your movement. MediaPipe AI maps 33 body landmarks across every frame to find real biomechanical weaknesses.' },
-            { icon: <Brain className="w-6 h-6 text-accent" />, color: 'accent', title: 'Role Intelligence', desc: 'Your scores are benchmarked against elite profiles for your exact sport role — Striker vs Centre Back vs Goalkeeper.' },
-            { icon: <Target className="w-6 h-6 text-warning" />, color: 'warning', title: 'AI Training Plans', desc: 'Mistral LLM generates a personalised 4-week plan targeting your top bottlenecks with progressive overload built in.' },
-            { icon: <TrendingUp className="w-6 h-6 text-purple-400" />, color: 'purple', title: 'Progress Tracking', desc: 'Log every session, track perceived exertion, and watch your movement scores improve over time.' },
-            { icon: <Shield className="w-6 h-6 text-danger" />, color: 'danger', title: 'Recovery Protocols', desc: 'Role-specific recovery plans with foam rolling circuits, mobility flows, and load management guidance.' },
-            { icon: <Zap className="w-6 h-6 text-yellow-400" />, color: 'yellow', title: 'No Account Needed', desc: 'Jump straight in. Select your sport, rate your ability, and get your personalised plan in under 3 minutes.' },
-          ].map(({ icon, title, desc }) => (
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              className="glass p-6 rounded-2xl group"
+        {/* ── 3. BOTTOM ACTION DOCK ─────────────────────────────────────────── */}
+        <footer className="w-full max-w-md mx-auto space-y-3 pt-2 pb-safe">
+          <button
+            onClick={() => navigate('/onboarding?mode=signup')}
+            className="w-full h-12 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2 active-press shadow-[0_4px_24px_rgba(255,255,255,0.2)]"
+          >
+            <span>Build Athlete Profile</span>
+            <ArrowRightIcon className="w-4 h-4" />
+          </button>
+
+          <p className="text-center text-[11px] text-slate-400 font-sans">
+            Already registered?{' '}
+            <Link
+              to="/onboarding?mode=signin"
+              className="text-white hover:underline font-tech font-bold ml-1"
             >
-              <div className="w-12 h-12 rounded-xl bg-white/05 border border-white/08 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                {icon}
-              </div>
-              <h3 className="text-base font-bold mb-2">{title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed">{desc}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="glass-glow text-center mt-16 p-12 rounded-3xl"
-        >
-          <h2 className="text-3xl font-black mb-3 gradient-text-blue">Ready to break your limits?</h2>
-          <p className="text-white/40 mb-8">No sign up. No credit card. Just your sport and your goals.</p>
-          <Link to="/onboarding" className="btn-primary inline-flex items-center gap-2 py-4 px-10 rounded-2xl text-base">
-            Get My Free Plan <ChevronRight className="w-5 h-5" />
-          </Link>
-        </motion.div>
-      </section>
+              Sign In to Studio
+            </Link>
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

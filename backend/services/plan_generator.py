@@ -1,49 +1,42 @@
-import ollama
 import json
 import re
-
-# ─── Configuration ────────────────────────────────────────────────────────────
-OLLAMA_MODEL = "mistral"          # Primary model (4.4 GB, great JSON output)
-OLLAMA_FALLBACK_MODEL = "llama3.2"  # Fallback if mistral is busy
-OLLAMA_HOST = "http://localhost:11434"
+from config import settings
 
 
 class PlanGenerator:
     """
-    Generates structured 4-week training and recovery plans using a local
-    Ollama LLM (Mistral by default), with a comprehensive built-in fallback.
+    Generates structured 4-week training and recovery plans using Google Gemini Flash,
+    with a comprehensive built-in fallback.
     """
 
     def __init__(self):
-        self.client = ollama.Client(host=OLLAMA_HOST)
-        self._model = OLLAMA_MODEL
+        self.model = settings.GEMINI_MODEL
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     def generate_plan(self, athlete_profile: dict, bottlenecks: list) -> dict:
-        """Generate a 4-week structured training plan via Ollama."""
+        """Generate a 4-week structured training plan via Gemini Flash."""
         prompt = self.build_prompt(athlete_profile, bottlenecks)
 
-        for model in [self._model, OLLAMA_FALLBACK_MODEL]:
+        if settings.GEMINI_API_KEY:
             try:
-                response = self.client.chat(
-                    model=model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are an elite sports performance coach. "
-                                "You ONLY respond with valid JSON — no markdown, no explanation, no code fences. "
-                                "Your JSON must exactly match the schema requested."
-                            ),
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    options={"temperature": 0.3, "num_predict": 4096},
+                from google import genai
+
+                client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                system_instruction = (
+                    "You are an elite sports performance coach. "
+                    "You ONLY respond with valid JSON — no markdown, no explanation, no code fences. "
+                    "Your JSON must exactly match the schema requested."
                 )
-                raw = response["message"]["content"].strip()
+                full_prompt = f"{system_instruction}\n\n{prompt}"
+
+                response = client.models.generate_content(
+                    model=self.model,
+                    contents=full_prompt,
+                )
+                raw = response.text.strip()
                 # Strip any accidental markdown fences
                 raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
                 raw = re.sub(r"```$", "", raw, flags=re.MULTILINE).strip()
@@ -51,10 +44,10 @@ class PlanGenerator:
                 match = re.search(r"\{.*\}", raw, re.DOTALL)
                 if match:
                     plan = json.loads(match.group())
-                    plan["_source"] = f"ollama:{model}"
+                    plan["_source"] = f"gemini:{self.model}"
                     return plan
-            except Exception:
-                continue  # Try fallback model or built-in template
+            except Exception as e:
+                print(f"[PlanGenerator] Gemini generation failed: {e}")
 
         return self._fallback_plan(athlete_profile, bottlenecks)
 

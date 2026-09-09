@@ -1,0 +1,94 @@
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAthleteStore } from '../../store/athleteStore';
+import { normalizeSport } from '../../config/sportAssessmentConfig';
+import SportifyLogo from '../common/SportifyLogo';
+import { SportIcon, LogoutIcon, ZapIcon } from '../common/Icons';
+
+export default function MobileTopBar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const athlete = useAthleteStore((state) => state.athlete);
+  const profile = useAthleteStore((state) => state.profile);
+  const logout = useAthleteStore((state) => state.logout);
+
+  const normalizedSport = profile?.sport ? normalizeSport(profile.sport) : 'cricket';
+  const assessmentPath = `/assessment/${normalizedSport || 'cricket'}`;
+
+  const handleSignOut = () => {
+    logout();
+    navigate('/onboarding?mode=signin');
+  };
+
+  const roleTitle = profile?.sub_role
+    ? profile.sub_role.replace(/_/g, ' ')
+    : profile?.primary_role || 'Athlete';
+
+  const navLinks = [
+    { to: '/dashboard', label: 'Dashboard', isActive: location.pathname === '/dashboard' },
+    { to: '/plan', label: 'Training', isActive: location.pathname.startsWith('/plan') },
+    { to: assessmentPath, label: 'Assessment', isActive: location.pathname.startsWith('/assessment') || location.pathname === '/video' || location.pathname.startsWith('/analysis') },
+    { to: '/recovery', label: 'Recovery', isActive: location.pathname.startsWith('/recovery') },
+    { to: '/progress', label: 'Progress', isActive: location.pathname.startsWith('/progress') },
+  ];
+
+  return (
+    <header className="sticky top-0 z-40 w-full bg-[#07080C]/90 backdrop-blur-xl border-b border-white/[0.08] pt-safe select-none">
+      <div className="w-full max-w-5xl mx-auto h-14 px-4 flex items-center justify-between gap-3">
+        {/* Left: Brand Identity */}
+        <div className="flex items-center gap-3 shrink-0">
+          <Link to="/dashboard" className="focus:outline-none flex items-center gap-2">
+            <SportifyLogo size="xs" showTagline={false} />
+          </Link>
+
+          {/* Sport & Tactical Role Status Pill */}
+          {profile?.sport && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-white text-[10px] font-tech font-bold uppercase tracking-wider max-w-[140px] truncate shadow-inner">
+              <SportIcon sport={profile.sport} className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span className="truncate">{roleTitle}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Center: Desktop Navigation Bar (hidden on mobile, visible on tablet/desktop) */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navLinks.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`px-3 py-1.5 rounded-lg text-xs font-tech font-bold uppercase tracking-wider transition-all ${
+                item.isActive
+                  ? 'bg-white text-slate-950 shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Right: Fast Assessment Action & Sign Out */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            to={assessmentPath}
+            className="px-2.5 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/15 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-tech font-bold uppercase tracking-wider shadow-sm"
+            title="New Assessment"
+          >
+            <ZapIcon className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Record</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all active:scale-95 flex items-center justify-center"
+            title="Sign Out"
+          >
+            <LogoutIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}

@@ -7,9 +7,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
-    # Ollama local LLM config
-    OLLAMA_HOST: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "mistral"
+    # Gemini AI config
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
 
     UPLOAD_DIR: str = "./uploads"
     MAX_VIDEO_SIZE_MB: int = 100

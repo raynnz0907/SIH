@@ -243,8 +243,18 @@ class PoseAnalyzer:
     # ── AI Coaching ────────────────────────────────────────────────────────
 
     def generate_coaching_advice(self, sport: str, role: str, movement_scores: dict) -> dict:
-        """Call Ollama Mistral for sport-specific coaching. Falls back gracefully."""
-        import ollama, json, re
+        """Call Google Gemini Flash for sport-specific coaching. Falls back to built-in tips if key missing or error."""
+        import json, re
+        try:
+            from google import genai
+            from config import settings
+
+            if not settings.GEMINI_API_KEY:
+                return self.get_fallback_coaching(sport, role)
+
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        except Exception:
+            return self.get_fallback_coaching(sport, role)
 
         scores_text = "\n".join(
             f"  - {k.replace('_',' ').title()}: {v:.0f}/100" for k, v in movement_scores.items()
@@ -264,7 +274,7 @@ Focus on: {sport_context}
 Video movement scores:
 {scores_text}
 
-Give direct, specific, practical coaching. Return ONLY valid JSON, no markdown:
+Give direct, specific, practical coaching. Return ONLY valid JSON (no markdown, no code blocks):
 {{
   "overall_assessment": "2-3 sentence honest assessment",
   "strengths": ["specific strength 1", "specific strength 2"],
@@ -285,22 +295,18 @@ Give direct, specific, practical coaching. Return ONLY valid JSON, no markdown:
 }}"""
 
         try:
-            client = ollama.Client(host="http://localhost:11434")
-            resp = client.chat(
-                model="mistral",
-                messages=[
-                    {"role": "system", "content": "You are a world-class sports coach. Respond ONLY with valid JSON."},
-                    {"role": "user",   "content": prompt},
-                ],
-                options={"temperature": 0.3, "num_predict": 2048},
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL,
+                contents=prompt,
             )
-            raw = resp["message"]["content"].strip()
+            raw = response.text.strip()
+            # Strip any accidental markdown code fences
             raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
             raw = re.sub(r"```$",          "", raw, flags=re.MULTILINE).strip()
             m = re.search(r"\{.*\}", raw, re.DOTALL)
             if m:
                 result = json.loads(m.group())
-                result["_source"] = "mistral"
+                result["_source"] = "gemini"
                 return result
         except Exception:
             pass

@@ -1,109 +1,204 @@
-import { BedDouble, Droplets, Apple, Activity, BookHeart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useAthleteStore } from '../store/athleteStore';
+import { planAPI } from '../api/client';
+import {
+  ShieldIcon,
+  HeartPulseIcon,
+  CheckIcon,
+  ClockIcon,
+  SparklesIcon,
+  ZapIcon,
+  TargetIcon,
+  FlameIcon,
+} from '../components/common/Icons';
 
 export default function RecoveryPlan() {
+  const profile = useAthleteStore((state) => state.profile);
+  const [recoveryData, setRecoveryData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadRecovery() {
+      try {
+        const res = await planAPI.getRecovery();
+        if (res) setRecoveryData(res);
+      } catch (err) {
+        console.error('Failed to load recovery protocol:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadRecovery();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 select-none">
+        <div className="w-8 h-8 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+        <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
+          Calculating Load Strain & Recovery Protocols...
+        </p>
+      </div>
+    );
+  }
+
+  const loadContext = recoveryData?.load_context || {};
+  const isHighStrain = loadContext.strain_status === 'High Strain';
+  const habits = recoveryData?.daily_habits || [];
+  const activeSessions = recoveryData?.active_recovery_sessions || [];
+  const schedule = recoveryData?.weekly_recovery_schedule || {};
+  const injuryPrehab = recoveryData?.injury_prevention_focus;
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Recovery Protocols</h1>
-        <p className="text-gray-400 mt-1">Optimize your body's adaptation and prevent injury.</p>
+    <div className="space-y-3.5 select-none">
+      {/* ── TOP HERO BANNER ─────────────────────────────────────────────────── */}
+      <div className="sportify-card p-4 relative overflow-hidden">
+        <div className="relative z-10 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-bold font-tech text-emerald-400 tracking-widest uppercase px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/25">
+              Recovery Center
+            </span>
+            <span className="text-[10px] font-mono text-slate-400 uppercase">
+              {loadContext.strain_status || 'Optimal Adaptation'}
+            </span>
+          </div>
+
+          <div>
+            <h1 className="text-base font-extrabold font-heading tracking-tight uppercase text-white">
+              Strain Diagnostics & Restoration
+            </h1>
+            <p className="text-[11px] text-slate-400 font-sans leading-relaxed mt-0.5">
+              Recovery protocols calculated from your recent session volume and average RPE.
+            </p>
+          </div>
+
+          <div
+            className={`p-2.5 rounded-xl border text-center ${
+              isHighStrain
+                ? 'bg-rose-500/10 border-rose-500/30'
+                : 'bg-emerald-500/10 border-emerald-500/30'
+            }`}
+          >
+            <div className="text-[9px] font-tech uppercase tracking-wider text-slate-400">
+              Current Load State
+            </div>
+            <div
+              className={`text-base font-bold font-mono ${
+                isHighStrain ? 'text-rose-400' : 'text-emerald-400'
+              }`}
+            >
+              {loadContext.strain_status || 'Optimal'}
+            </div>
+            <div className="text-[10px] font-mono text-slate-400">
+              Avg RPE: {loadContext.avg_recent_rpe?.toFixed(1) || 6.0} • {loadContext.total_weekly_minutes || 240} Mins
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-surface border border-subtle rounded-2xl p-6">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <BedDouble className="w-6 h-6 text-indigo-400" />
-            Sleep & CNS Recovery
-          </h2>
-          <ul className="space-y-4">
-            <li className="flex gap-4 items-start">
-              <div className="bg-indigo-400/20 text-indigo-400 p-2 rounded flex-shrink-0"><CheckIcon /></div>
-              <div>
-                <h4 className="font-bold">Target: 8+ Hours</h4>
-                <p className="text-sm text-gray-400 mt-1">Due to high central nervous system tax from plyometrics, extended sleep is mandatory for adaptation.</p>
-              </div>
-            </li>
-            <li className="flex gap-4 items-start">
-              <div className="bg-indigo-400/20 text-indigo-400 p-2 rounded flex-shrink-0"><CheckIcon /></div>
-              <div>
-                <h4 className="font-bold">Sleep Hygiene</h4>
-                <p className="text-sm text-gray-400 mt-1">No screens 60m before bed. Keep room temperature around 18°C (65°F).</p>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <div className="bg-surface border border-subtle rounded-2xl p-6">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <Droplets className="w-6 h-6 text-blue-400" />
-            Active Recovery
-          </h2>
-          <ul className="space-y-4">
-            <li className="flex gap-4 items-start">
-              <div className="bg-blue-400/20 text-blue-400 p-2 rounded flex-shrink-0"><CheckIcon /></div>
-              <div>
-                <h4 className="font-bold">Light Flush</h4>
-                <p className="text-sm text-gray-400 mt-1">15-20 min stationary bike at low intensity (Zone 1) on rest days.</p>
-              </div>
-            </li>
-            <li className="flex gap-4 items-start">
-              <div className="bg-blue-400/20 text-blue-400 p-2 rounded flex-shrink-0"><CheckIcon /></div>
-              <div>
-                <h4 className="font-bold">Mobility Routine</h4>
-                <p className="text-sm text-gray-400 mt-1">Focus on hip flexors and ankle dorsiflexion to support squat mechanics.</p>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <div className="bg-surface border border-subtle rounded-2xl p-6">
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-            <Apple className="w-6 h-6 text-accent" />
-            Nutrition Timing
-          </h2>
-          <ul className="space-y-4">
-            <li className="flex gap-4 items-start">
-              <div className="bg-accent/20 text-accent p-2 rounded flex-shrink-0"><CheckIcon /></div>
-              <div>
-                <h4 className="font-bold">Post-Workout Window</h4>
-                <p className="text-sm text-gray-400 mt-1">Consume 30g protein + 60g carbs within 45 minutes of session completion.</p>
-              </div>
-            </li>
-            <li className="flex gap-4 items-start">
-              <div className="bg-accent/20 text-accent p-2 rounded flex-shrink-0"><CheckIcon /></div>
-              <div>
-                <h4 className="font-bold">Hydration</h4>
-                <p className="text-sm text-gray-400 mt-1">Target 3.5L water daily. Add electrolytes on high-intensity days.</p>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <div className="bg-surface border border-subtle rounded-2xl p-6 border-danger/30 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-            <BookHeart className="w-32 h-32 text-danger" />
+      {/* ── DAILY RESTORATION HABITS & INJURY PREHAB ───────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        {/* Daily Habits */}
+        <div className="sportify-card p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold font-heading tracking-wide uppercase text-white">
+              Daily Restoration Habits
+            </h3>
+            <span className="text-[9px] font-mono text-slate-400">
+              {habits.length} Habits
+            </span>
           </div>
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-danger">
-            <Activity className="w-6 h-6" />
-            Injury Prevention
-          </h2>
-          <p className="text-gray-300 mb-4 text-sm leading-relaxed">
-            Your analysis showed valgus knee collapse. To prevent ACL/MCL strain:
+
+          <div className="space-y-1.5">
+            {habits.map((habit, idx) => (
+              <div
+                key={idx}
+                className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] flex items-start gap-2 text-[11px] text-slate-200"
+              >
+                <CheckIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                <span className="leading-snug font-sans">{habit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Injury Prehab Card */}
+        <div className="sportify-card p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-bold font-tech text-amber-400 uppercase tracking-widest">
+              Prehab Focus
+            </span>
+            <TargetIcon className="w-3.5 h-3.5 text-amber-400" />
+          </div>
+          <h3 className="text-xs font-bold font-heading tracking-wide uppercase text-white">
+            Joint Activation & Defense
+          </h3>
+          <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
+            {injuryPrehab ||
+              'Complete 5 minutes of targeted stabilization and dynamic mobilization before high-intensity sessions.'}
           </p>
-          <ul className="space-y-3 text-sm">
-            <li className="flex gap-2"><span className="text-danger">•</span> Always foam roll IT bands pre-workout.</li>
-            <li className="flex gap-2"><span className="text-danger">•</span> Perform banded glute bridges before any lower body compound movements.</li>
-            <li className="flex gap-2"><span className="text-danger">•</span> Abort jumping exercises if you feel sharp pain in the patellar tendon.</li>
-          </ul>
+        </div>
+      </div>
+
+      {/* ── ACTIVE RECOVERY SESSIONS ───────────────────────────────────────── */}
+      <div className="space-y-2">
+        <h2 className="text-xs font-bold font-heading tracking-wider uppercase text-white">
+          Active Recovery Protocols
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {activeSessions.map((session, idx) => (
+            <div key={idx} className="sportify-card p-3.5 space-y-2">
+              <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+                <h4 className="text-xs font-bold text-white font-heading">
+                  {session.name}
+                </h4>
+                <span className="text-xs font-mono text-slate-200 px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/15">
+                  {session.duration_minutes} Mins
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {session.exercises?.map((ex, exIdx) => (
+                  <div
+                    key={exIdx}
+                    className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-xs text-slate-300 font-sans"
+                  >
+                    • {ex}
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-[11px] text-slate-400 font-mono pt-1">
+                Timing: {session.when}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── WEEKLY SCHEDULE ────────────────────────────────────────────────── */}
+      <div className="sportify-card p-4 space-y-2">
+        <h3 className="text-xs font-bold font-heading tracking-wide uppercase text-white">
+          Weekly Recovery Schedule
+        </h3>
+
+        <div className="grid grid-cols-2 gap-2">
+          {Object.keys(schedule).map((dayKey) => (
+            <div
+              key={dayKey}
+              className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]"
+            >
+              <span className="text-[9px] font-bold font-tech text-slate-400 uppercase tracking-widest block mb-0.5">
+                {dayKey.replace(/_/g, ' ')}
+              </span>
+              <p className="text-[11px] text-slate-300 leading-snug font-sans truncate">
+                {schedule[dayKey]}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-    </svg>
   );
 }

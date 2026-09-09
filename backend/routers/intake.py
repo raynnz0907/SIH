@@ -49,3 +49,13 @@ async def get_sports():
     except Exception:
         return {}
 
+@router.get("/objectives")
+async def get_objectives():
+    return [
+        {"id": "explosiveness", "name": "Explosive Power", "description": "Maximize rate of force development and vertical launch"},
+        {"id": "deceleration", "name": "Deceleration & Landing Control", "description": "Absorb high eccentric loads and protect knee ligaments"},
+        {"id": "rotational_power", "name": "Rotational Velocity", "description": "Increase kinetic chain whip and torso torque"},
+        {"id": "joint_stability", "name": "Joint Stability", "description": "Reinforce knee, ankle, and shoulder stabilizers under load"},
+        {"id": "first_step", "name": "First-Step Quickness", "description": "Sharpen reactive takeoff and lateral change-of-direction"}
+    ]
+

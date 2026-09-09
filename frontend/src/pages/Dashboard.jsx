@@ -1,371 +1,491 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAthleteStore } from '../store/athleteStore';
+import { progressAPI, planAPI, intakeAPI } from '../api/client';
+import { normalizeSport } from '../config/sportAssessmentConfig';
+import BenchmarkBar from '../components/common/BenchmarkBar';
 import {
-  Flame, Activity, Calendar, Zap, TrendingUp, Video,
-  Plus, X, CheckCircle2, AlertCircle, ChevronRight
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
-
-const ALL_GOALS = [
-  'Improve acceleration', 'Build strength', 'Boost agility',
-  'Increase stamina', 'Better flexibility', 'Injury prevention',
-  'Improve technique', 'Lose weight', 'Gain muscle',
-];
-
-const PRIORITY = {
-  high:   { border: 'rgba(239,68,68,.40)',  bg: 'rgba(239,68,68,.07)',  color: '#FCA5A5', dot: '#EF4444' },
-  medium: { border: 'rgba(245,158,11,.40)', bg: 'rgba(245,158,11,.07)', color: '#FCD34D', dot: '#F59E0B' },
-  low:    { border: 'rgba(59,130,246,.40)', bg: 'rgba(59,130,246,.07)', color: '#93C5FD', dot: '#3B82F6' },
-};
-
-const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  StrengthIcon,
+  ProficientIcon,
+  DevAreaIcon,
+  CriticalIcon,
+  TargetIcon,
+  FlameIcon,
+  ZapIcon,
+  ClockIcon,
+  DumbbellIcon,
+  ArrowRightIcon,
+  ShieldIcon,
+  RefreshIcon,
+  PlusIcon,
+  CalendarIcon,
+  TrendingUpIcon,
+} from '../components/common/Icons';
 
 export default function Dashboard() {
-  const { athlete, login } = useAthleteStore();
-  const name  = athlete?.name?.split(' ')[0] || 'Athlete';
-  const sport = athlete?.sport || 'football';
-  const role  = athlete?.role  || 'striker';
+  const navigate = useNavigate();
+  const athlete = useAthleteStore((state) => state.athlete);
+  const profile = useAthleteStore((state) => state.profile);
+  const setProfile = useAthleteStore((state) => state.setProfile);
 
-  /* ── Goals editing ─────────────────────────────────── */
-  const [goals, setGoals]       = useState(athlete?.goals || []);
-  const [showPicker, setPicker] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [currentPlan, setCurrentPlan] = useState(null);
+  const [activeTier, setActiveTier] = useState('bottlenecks');
 
   useEffect(() => {
-    if (athlete) login({ ...athlete, goals }, athlete?.token || 'local-session');
-  }, [goals]);
-
-  const removeGoal = (g) => setGoals(p => p.filter(x => x !== g));
-  const addGoal    = (g) => { setGoals(p => [...p, g]); setPicker(false); };
-  const available  = ALL_GOALS.filter(g => !goals.includes(g));
-
-  /* ── Video coaching ─────────────────────────────────── */
-  const [file, setFile]         = useState(null);
-  const [dragOver, setDragOver] = useState(false);
-  const [analyzing, setAnal]    = useState(false);
-  const [jobId, setJobId]       = useState(null);
-  const [coaching, setCoach]    = useState(null);
-  const [err, setErr]           = useState('');
-  const fileRef = useRef(null);
-  const pollRef = useRef(null);
-
-  // Poll backend every 3s until done
-  useEffect(() => {
-    if (!jobId) return;
-    pollRef.current = setInterval(async () => {
+    async function loadDashboard() {
+      setLoading(true);
       try {
-        const r = await axios.get(`/api/video/coach/${jobId}`);
-        if (r.data.status === 'completed') {
-          clearInterval(pollRef.current);
-          setCoach(r.data.coaching);
-          setAnal(false);
-          setJobId(null);
-        } else if (r.data.status === 'failed') {
-          clearInterval(pollRef.current);
-          setCoach(r.data.coaching || null);
-          setAnal(false);
-          setErr('Analysis struggled — showing built-in tips below.');
-          setJobId(null);
-        }
-      } catch {
-        clearInterval(pollRef.current);
-        setAnal(false);
-        setErr('Could not reach server. Is the backend running?');
+        const [dashRes, planRes, profRes] = await Promise.all([
+          progressAPI.getDashboard().catch(() => null),
+          planAPI.getCurrent().catch(() => null),
+          intakeAPI.getProfile().catch(() => null),
+        ]);
+
+        if (dashRes) setDashboardData(dashRes);
+        if (planRes) setCurrentPlan(planRes);
+        if (profRes) setProfile(profRes);
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      } finally {
+        setLoading(false);
       }
-    }, 3000);
-    return () => clearInterval(pollRef.current);
-  }, [jobId]);
-
-  const handleAnalyze = async () => {
-    if (!file) return;
-    setAnal(true); setErr(''); setCoach(null);
-    const form = new FormData();
-    form.append('video', file);
-    form.append('sport', sport);
-    form.append('role', role.replace(/ /g, '_').toLowerCase());
-    try {
-      const r = await axios.post('/api/video/coach', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      setJobId(r.data.job_id);
-    } catch {
-      setAnal(false);
-      setErr('Upload failed. Make sure the backend is running on port 8000.');
     }
-  };
+    loadDashboard();
+  }, [setProfile]);
 
-  const handleDrop = (e) => {
-    e.preventDefault(); setDragOver(false);
-    const f = e.dataTransfer.files[0];
-    if (f?.type.startsWith('video/')) setFile(f);
-  };
+  const devProfile = dashboardData?.development_profile || {};
+  const strengths = devProfile.strengths || [];
+  const proficient = devProfile.proficient || [];
+  const devAreas = devProfile.development_areas || [];
+  const bottlenecks = devProfile.critical_bottlenecks || [];
+  const trainingStats = dashboardData?.training_stats || {};
+  const recovery = dashboardData?.recovery_recommendation || {};
 
-  const resetVideo = () => { setCoach(null); setFile(null); setErr(''); setJobId(null); };
+  const normalizedSport = profile?.sport ? normalizeSport(profile.sport) : 'cricket';
+  const assessmentPath = `/assessment/${normalizedSport}`;
 
-  /* ── Stats ─────────────────────────────────────────── */
-  const stats = [
-    { icon: <Flame className="w-4 h-4" />,     label: 'Streak',     value: '4 Days',    color: '#F59E0B' },
-    { icon: <Calendar className="w-4 h-4" />,  label: 'This Week',  value: '3 Sessions', color: '#3B82F6' },
-    { icon: <Activity className="w-4 h-4" />,  label: 'Readiness',  value: '85%',        color: '#22C55E' },
-    { icon: <TrendingUp className="w-4 h-4" />, label: 'Analyses',  value: coaching ? '1' : '0', color: '#A78BFA' },
-  ];
+  const sportTitle = profile?.sport ? profile.sport.toUpperCase() : 'SPORTIFY';
+  const roleTitle = profile?.sub_role
+    ? profile.sub_role.replace(/_/g, ' ')
+    : profile?.primary_role || 'Athlete';
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin" />
+        <p className="text-[11px] font-mono text-slate-400 uppercase tracking-widest">
+          Syncing Biomechanical Telemetry...
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 relative">
-      {/* Subtle orb */}
-      <div className="orb orb-blue w-96 h-96 top-[-20%] right-0 opacity-15 pointer-events-none" />
+    <div className="space-y-3.5 select-none">
+      {/* ── TOP HERO BANNER ─────────────────────────────────────────────────── */}
+      <div className="sportify-card p-4 relative overflow-hidden">
+        {/* Subtle specular sheen */}
+        <div className="absolute -top-24 -right-24 w-72 h-72 bg-radial-gradient from-white/[0.04] to-transparent pointer-events-none" />
 
-      {/* ── Header ───────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
-        <div>
-          <p className="text-white/40 text-sm font-medium mb-1">Welcome back</p>
-          <h1 className="text-3xl font-black gradient-text">Hey, {name} 👋</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="badge badge-blue">{cap(sport)}</span>
-            <span className="badge badge-blue">{role.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
-          </div>
-        </div>
-
-        {/* Goals editor */}
-        <div className="glass p-4 rounded-2xl w-full lg:w-auto lg:min-w-[300px]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">My Goals</span>
-            <div className="relative">
-              <button onClick={() => setPicker(v => !v)}
-                className="flex items-center gap-1 text-xs text-primary hover:text-blue-300 transition-colors">
-                <Plus className="w-3.5 h-3.5" /> Edit goals
-              </button>
-              <AnimatePresence>
-                {showPicker && (
-                  <motion.div
-                    initial={{ opacity:0, y:-8, scale:.95 }}
-                    animate={{ opacity:1, y:0, scale:1 }}
-                    exit={{ opacity:0, y:-8, scale:.95 }}
-                    className="absolute right-0 top-6 z-50 glass-lg rounded-xl p-2 min-w-[200px] space-y-0.5 shadow-glass-lg"
-                  >
-                    {available.map(g => (
-                      <button key={g} onClick={() => addGoal(g)}
-                        className="block w-full text-left text-xs px-3 py-2 rounded-lg hover:bg-white/08 text-white/60 hover:text-white transition-colors">
-                        {g}
-                      </button>
-                    ))}
-                    {available.length === 0 && (
-                      <p className="text-xs text-white/30 px-3 py-2">All goals added!</p>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {goals.map(g => (
-              <span key={g} className="flex items-center gap-1 badge badge-blue text-xs">
-                {g}
-                <button onClick={() => removeGoal(g)} className="hover:text-red-400 transition-colors ml-0.5">
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            ))}
-            {goals.length === 0 && (
-              <span className="text-xs text-white/30">No goals yet — add some above ↑</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Stats row ────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {stats.map(({ icon, label, value, color }) => (
-          <div key={label} className="stat-card">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                   style={{ background:`${color}18`, color }}>
-                {icon}
-              </div>
-              <span className="text-xs text-white/40 font-medium">{label}</span>
-            </div>
-            <div className="text-2xl font-black text-white">{value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── AI Video Coach ────────────────────────────── */}
-      <div className="glass-lg p-6 rounded-3xl">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center">
-            <Video className="w-5 h-5 text-primary" />
-          </div>
+        <div className="relative z-10 flex flex-col gap-2.5">
           <div>
-            <h2 className="font-black text-lg leading-tight">AI Movement Coach</h2>
-            <p className="text-xs text-white/40 mt-0.5">
-              Upload a clip of you training — Mistral AI gives you personalised {cap(sport)} coaching
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold font-tech text-white tracking-[0.16em] uppercase px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/15">
+                {sportTitle} • {roleTitle}
+              </span>
+              <span className="text-[10px] font-mono text-slate-400 capitalize">
+                {profile?.experience_level || 'Intermediate'}
+              </span>
+            </div>
+            <h1 className="text-lg font-extrabold font-heading tracking-tight text-white uppercase leading-snug">
+              Welcome back,{' '}
+              <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                {athlete?.full_name || athlete?.name || 'Athlete'}
+              </span>
+            </h1>
+            <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+              Calibrated against {sportTitle.toLowerCase()} {roleTitle} demands.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-0.5">
+            <Link
+              to={assessmentPath}
+              className="flex-1 btn-primary text-xs h-10 flex items-center justify-center gap-1.5 active-press"
+            >
+              <ZapIcon className="w-3.5 h-3.5" />
+              <span>Record</span>
+            </Link>
+            <Link
+              to="/plan"
+              className="flex-1 btn-secondary text-xs h-10 flex items-center justify-center gap-1.5 active-press"
+            >
+              <DumbbellIcon className="w-3.5 h-3.5" />
+              <span>Training</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Telemetry Stat Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+          <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center gap-1.5 text-slate-400 text-[10px] mb-0.5">
+              <FlameIcon className="w-3 h-3 text-amber-400" />
+              <span className="font-tech font-medium uppercase tracking-wider">Streak</span>
+            </div>
+            <p className="text-base font-bold font-mono text-white">
+              {trainingStats.streak_days || 0}{' '}
+              <span className="text-[10px] font-normal text-slate-400">Days</span>
+            </p>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center gap-1.5 text-slate-400 text-[10px] mb-0.5">
+              <CalendarIcon className="w-3 h-3 text-slate-300" />
+              <span className="font-tech font-medium uppercase tracking-wider">Sessions</span>
+            </div>
+            <p className="text-base font-bold font-mono text-white">
+              {trainingStats.total_sessions || 0}
+            </p>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center gap-1.5 text-slate-400 text-[10px] mb-0.5">
+              <TargetIcon className="w-3 h-3 text-rose-400" />
+              <span className="font-tech font-medium uppercase tracking-wider">Avg RPE</span>
+            </div>
+            <p className="text-base font-bold font-mono text-white">
+              {trainingStats.avg_rpe ? trainingStats.avg_rpe.toFixed(1) : '0.0'}{' '}
+              <span className="text-[10px] font-normal text-slate-400">/ 10</span>
+            </p>
+          </div>
+
+          <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            <div className="flex items-center gap-1.5 text-slate-400 text-[10px] mb-0.5">
+              <ShieldIcon className="w-3 h-3 text-emerald-400" />
+              <span className="font-tech font-medium uppercase tracking-wider">Recovery</span>
+            </div>
+            <p className="text-xs font-bold font-tech text-emerald-400 truncate uppercase tracking-wider mt-0.5">
+              {recovery?.load_context?.strain_status || 'Optimal'}
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Drop zone — only show when no coaching result yet */}
-        {!coaching && !analyzing && (
-          <>
-            <div
-              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileRef.current?.click()}
-              className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 ${
-                dragOver
-                  ? 'border-primary bg-primary/10 scale-[1.01]'
-                  : 'border-white/12 hover:border-white/25 hover:bg-white/03'
-              }`}
-            >
-              <input ref={fileRef} type="file" accept="video/*" className="hidden"
-                     onChange={e => setFile(e.target.files?.[0] || null)} />
-              <Video className="w-12 h-12 mx-auto text-white/20 mb-4" />
-              {file ? (
-                <>
-                  <p className="font-semibold text-white/80 mb-1">{file.name}</p>
-                  <p className="text-xs text-white/40">{(file.size/1024/1024).toFixed(1)} MB · Click to change</p>
-                </>
+      {/* ── TODAY'S PERFORMANCE FOCUS ────────────────────────────────────────── */}
+      <div className="sportify-card p-4 border-white/10 bg-white/[0.02] space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-[9px] font-bold font-tech uppercase tracking-wider">
+            Today's Priority Focus
+          </span>
+          <span className="text-[10px] font-mono text-slate-400">
+            Calibrated for {roleTitle}
+          </span>
+        </div>
+        <h3 className="text-sm font-bold font-heading text-white leading-snug">
+          {normalizedSport === 'cricket' && (profile?.primary_role === 'bowler' ? 'Bowling Power & Deceleration Baseline' : 'Front-Foot Drive Mechanics')}
+          {normalizedSport === 'football' && (profile?.primary_role === 'goalkeeper' ? 'Aerial Elevation & Shock Attenuation Baseline' : 'Striking & Ball Impact Deceleration')}
+          {normalizedSport === 'basketball' && (['center', 'power_forward'].includes(profile?.primary_role) ? 'Interior Elevation & Rebound Landing Baseline' : 'Jump Shot Verticality & Release Mechanics')}
+          {normalizedSport === 'athletics' && (['jumper', 'thrower'].includes(profile?.primary_role) ? 'Elastic Force Production & Mobility Baseline' : 'Sprint Acceleration Drive & Stride Rhythm')}
+        </h3>
+        <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+          {normalizedSport === 'cricket' && (profile?.primary_role === 'bowler' ? 'Complete your lower-body power baseline (Vertical Jump) to calibrate shock attenuation against bowling delivery loads.' : 'Evaluate head-over-ball weight transfer and front-knee brace stability on front-foot drives.')}
+          {normalizedSport === 'football' && (profile?.primary_role === 'goalkeeper' ? 'Establish your vertical impulse and bilateral landing deceleration for aerial cross claims.' : 'Analyze plant-knee stability under load, hip rotational whip, and forward torso control.')}
+          {normalizedSport === 'basketball' && (['center', 'power_forward'].includes(profile?.primary_role) ? 'Measure explosive vertical displacement and bilateral knee landing control for paint contests.' : 'Assess shooting elbow verticality, jump elevation height, and balanced two-foot landing.')}
+          {normalizedSport === 'athletics' && (['jumper', 'thrower'].includes(profile?.primary_role) ? 'Establish lower-limb stretch-shortening cycle power and hip mobility foundations.' : 'Analyze linear acceleration drive angle, high lead-knee punch, and stride cadence symmetry.')}
+        </p>
+
+        <Link
+          to={assessmentPath}
+          className="btn-primary text-xs w-full h-11 flex items-center justify-center gap-2 uppercase tracking-wider mt-2.5 active-press"
+        >
+          <ZapIcon className="w-4 h-4" />
+          <span>Launch Studio</span>
+        </Link>
+      </div>
+
+      {/* ── 4-TIER DEVELOPMENT INTELLIGENCE GRID ───────────────────────────── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xs font-bold font-heading tracking-wider uppercase text-white">
+              Development Matrix
+            </h2>
+            <p className="text-[10px] text-slate-400">
+              Evaluated against verified {roleTitle} demands.
+            </p>
+          </div>
+          <Link
+            to={assessmentPath}
+            className="text-[10px] font-semibold text-slate-300 hover:text-white font-tech tracking-wider uppercase flex items-center gap-1 px-2 py-0.5 rounded-lg border border-white/10 bg-white/[0.03] active-press"
+          >
+            <span>Reassess</span>
+            <ArrowRightIcon className="w-2.5 h-2.5" />
+          </Link>
+        </div>
+
+        {/* 4-Pill Segmented Selector */}
+        <div className="grid grid-cols-4 p-1 rounded-xl bg-white/[0.04] border border-white/10 gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTier('bottlenecks')}
+            className={`py-1.5 px-1 rounded-lg text-[10px] font-bold font-tech uppercase tracking-tight text-center truncate transition-all active-press ${
+              activeTier === 'bottlenecks'
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Deficit ({bottlenecks.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTier('devAreas')}
+            className={`py-1.5 px-1 rounded-lg text-[10px] font-bold font-tech uppercase tracking-tight text-center truncate transition-all active-press ${
+              activeTier === 'devAreas'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Areas ({devAreas.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTier('proficient')}
+            className={`py-1.5 px-1 rounded-lg text-[10px] font-bold font-tech uppercase tracking-tight text-center truncate transition-all active-press ${
+              activeTier === 'proficient'
+                ? 'bg-white text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Target ({proficient.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTier('strengths')}
+            className={`py-1.5 px-1 rounded-lg text-[10px] font-bold font-tech uppercase tracking-tight text-center truncate transition-all active-press ${
+              activeTier === 'strengths'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Strong ({strengths.length})
+          </button>
+        </div>
+
+        {/* Active Tier Display Card */}
+        {activeTier === 'bottlenecks' && (
+          <div className="sportify-card p-3.5 border-rose-500/25 bg-rose-500/[0.02] space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold font-tech text-rose-400 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5">
+                <CriticalIcon className="w-3.5 h-3.5" />
+                Critical Deficits
+              </span>
+              <span className="font-mono">{bottlenecks.length} items</span>
+            </div>
+            <div className="space-y-2">
+              {bottlenecks.length > 0 ? (
+                bottlenecks.map((item) => (
+                  <BenchmarkBar
+                    key={item.attribute}
+                    name={item.name || item.attribute.replace(/_/g, ' ')}
+                    score={item.score}
+                    benchmark={item.benchmark || 80}
+                    gap={item.gap !== undefined ? (item.gap > 0 ? -item.gap : item.gap) : -12}
+                    tier="bottleneck"
+                  />
+                ))
               ) : (
-                <>
-                  <p className="font-semibold text-white/50 mb-1">Drop your video here or click to browse</p>
-                  <p className="text-xs text-white/30">
-                    MP4, MOV, AVI · Any length ·
-                    Your sport: <strong className="text-primary">{cap(sport)}</strong> ·
-                    Role: <strong className="text-primary">{role.replace(/_/g,' ')}</strong>
-                  </p>
-                </>
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-3 text-emerald-300">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0">
+                    <StrengthIcon className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold font-heading uppercase tracking-wide text-white">
+                      No Critical Bottlenecks Detected
+                    </p>
+                    <p className="text-[11px] text-emerald-400/90 font-sans mt-0.5">
+                      All evaluated biomechanical attributes meet role tolerances.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
-
-            {file && (
-              <motion.button
-                initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
-                onClick={handleAnalyze}
-                className="btn-primary w-full mt-4 flex items-center justify-center gap-2 py-3.5 text-sm font-bold"
-              >
-                <Zap className="w-4 h-4" /> Analyse with Mistral AI
-              </motion.button>
-            )}
-          </>
-        )}
-
-        {/* Analysing spinner */}
-        {analyzing && (
-          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} className="text-center py-14">
-            <div className="relative w-16 h-16 mx-auto mb-5">
-              <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
-              <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-              <Video className="absolute inset-0 m-auto w-6 h-6 text-primary" />
-            </div>
-            <p className="font-bold text-white/80 mb-1">Mistral AI is analysing your movement...</p>
-            <p className="text-xs text-white/40">MediaPipe maps 33 body landmarks frame-by-frame · 30–60 seconds</p>
-          </motion.div>
-        )}
-
-        {/* Error */}
-        {err && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" /> {err}
           </div>
         )}
 
-        {/* ── Coaching Results ─────────────────────── */}
-        {coaching && (
-          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} className="space-y-5">
-            {/* Top bar */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-accent" />
-                <span className="font-bold text-accent">Analysis Complete</span>
-                {coaching._source && (
-                  <span className={`badge text-[10px] ${coaching._source === 'mistral' ? 'badge-blue' : 'badge-green'}`}>
-                    {coaching._source === 'mistral' ? '🦙 Mistral' : '📚 Built-in'}
-                  </span>
-                )}
-              </div>
-              <button onClick={resetVideo}
-                className="text-xs text-white/30 hover:text-white transition-colors flex items-center gap-1">
-                New video <ChevronRight className="w-3 h-3" />
-              </button>
+        {activeTier === 'devAreas' && (
+          <div className="sportify-card p-3.5 border-amber-500/25 bg-amber-500/[0.02] space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold font-tech text-amber-400 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5">
+                <DevAreaIcon className="w-3.5 h-3.5" />
+                Secondary Development Areas
+              </span>
+              <span className="font-mono">{devAreas.length} items</span>
             </div>
-
-            {/* Assessment + strengths */}
-            <div className="glass p-5 rounded-2xl border border-accent/20"
-                 style={{ background:'rgba(34,197,94,.05)' }}>
-              <p className="text-sm text-white/70 leading-relaxed">{coaching.overall_assessment}</p>
-              {coaching.strengths?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {coaching.strengths.map(s => (
-                    <span key={s} className="badge badge-green text-xs">✓ {s}</span>
-                  ))}
+            <div className="space-y-2">
+              {devAreas.length > 0 ? (
+                devAreas.map((item) => (
+                  <BenchmarkBar
+                    key={item.attribute}
+                    name={item.name || item.attribute.replace(/_/g, ' ')}
+                    score={item.score}
+                    benchmark={item.benchmark || 75}
+                    gap={item.gap !== undefined ? (item.gap > 0 ? -item.gap : item.gap) : -5}
+                    tier="dev_area"
+                  />
+                ))
+              ) : (
+                <div className="p-3 text-center rounded-lg bg-white/[0.02] text-xs text-slate-500">
+                  No secondary development areas detected.
                 </div>
               )}
             </div>
-
-            {/* Technique tips */}
-            {coaching.technique_tips?.length > 0 && (
-              <div>
-                <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">
-                  Technique Improvements
-                </h3>
-                <div className="grid md:grid-cols-3 gap-3">
-                  {coaching.technique_tips.map((tip, i) => {
-                    const s = PRIORITY[tip.priority] || PRIORITY.low;
-                    return (
-                      <div key={i} className="glass p-4 rounded-xl"
-                           style={{ borderColor:s.border, background:s.bg }}>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                               style={{ background:s.dot, boxShadow:`0 0 6px ${s.dot}` }} />
-                          <span className="text-xs font-bold" style={{ color:s.color }}>{tip.title}</span>
-                        </div>
-                        <p className="text-xs text-white/60 leading-relaxed">{tip.detail}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Strategy tips */}
-            {coaching.strategy_tips?.length > 0 && (
-              <div>
-                <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">
-                  Strategy & Tactics
-                </h3>
-                <div className="grid md:grid-cols-2 gap-3">
-                  {coaching.strategy_tips.map((tip, i) => (
-                    <div key={i} className="glass p-4 rounded-xl">
-                      <p className="text-xs font-bold text-blue-300 mb-1.5">{tip.title}</p>
-                      <p className="text-xs text-white/55 leading-relaxed">{tip.detail}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Drills */}
-            {coaching.drills?.length > 0 && (
-              <div>
-                <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">
-                  Recommended Drills
-                </h3>
-                <div className="grid md:grid-cols-3 gap-3">
-                  {coaching.drills.map((d, i) => (
-                    <div key={i} className="glass p-4 rounded-xl">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="text-xs font-bold text-white/80 leading-tight">{d.name}</span>
-                        <span className="badge badge-blue text-[10px] whitespace-nowrap flex-shrink-0">{d.reps}</span>
-                      </div>
-                      <p className="text-xs text-white/50 leading-relaxed">{d.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
+          </div>
         )}
+
+        {activeTier === 'proficient' && (
+          <div className="sportify-card p-3.5 border-white/15 bg-white/[0.02] space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold font-tech text-slate-300 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5">
+                <ProficientIcon className="w-3.5 h-3.5" />
+                Proficient / On Target
+              </span>
+              <span className="font-mono">{proficient.length} items</span>
+            </div>
+            <div className="space-y-2">
+              {proficient.length > 0 ? (
+                proficient.map((item) => (
+                  <BenchmarkBar
+                    key={item.attribute}
+                    name={item.name || item.attribute.replace(/_/g, ' ')}
+                    score={item.score}
+                    benchmark={item.benchmark || item.score}
+                    gap={0}
+                    tier="proficient"
+                  />
+                ))
+              ) : (
+                <div className="p-3 text-center rounded-lg bg-white/[0.02] text-xs text-slate-500">
+                  Run assessment to map proficient baselines.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTier === 'strengths' && (
+          <div className="sportify-card p-3.5 border-emerald-500/25 bg-emerald-500/[0.02] space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold font-tech text-emerald-400 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5">
+                <StrengthIcon className="w-3.5 h-3.5" />
+                Key Strengths
+              </span>
+              <span className="font-mono">{strengths.length} items</span>
+            </div>
+            <div className="space-y-2">
+              {strengths.length > 0 ? (
+                strengths.map((item) => (
+                  <BenchmarkBar
+                    key={item.attribute}
+                    name={item.name || item.attribute.replace(/_/g, ' ')}
+                    score={item.score}
+                    benchmark={item.benchmark || 75}
+                    gap={item.gap !== undefined ? Math.abs(item.gap) : 8}
+                    tier="strength"
+                  />
+                ))
+              ) : (
+                <div className="p-3 text-center rounded-lg bg-white/[0.02] text-xs text-slate-500">
+                  No highlighted strengths recorded yet.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── 4-WEEK TRAINING PATHWAY & RECOVERY PREVIEW ─────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        {/* Active Pathway Preview */}
+        <div className="sportify-card p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[9px] font-bold font-tech text-slate-400 uppercase tracking-widest block">
+                Active Pathway
+              </span>
+              <h3 className="text-xs font-bold font-heading tracking-wide text-white uppercase">
+                {currentPlan?.plan_data?.plan_title || '4-Week Development Pathway'}
+              </h3>
+            </div>
+            <Link
+              to="/plan"
+              className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-[10px] font-semibold text-slate-200 transition-all flex items-center gap-1 active-press"
+            >
+              <span>View All</span>
+              <ArrowRightIcon className="w-2.5 h-2.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            {currentPlan?.plan_data?.weeks?.slice(0, 2).map((wk) => (
+              <div
+                key={wk.week_number}
+                className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]"
+              >
+                <div className="flex items-center justify-between text-[11px] font-bold font-tech text-slate-300 mb-0.5">
+                  <span>W0{wk.week_number}</span>
+                  <span className="text-[9px] font-mono text-slate-500">
+                    {wk.sessions?.length || 4} Sess
+                  </span>
+                </div>
+                <h4 className="text-[11px] font-bold text-slate-200 truncate">
+                  {wk.week_theme?.split(':')[1] || wk.week_theme}
+                </h4>
+              </div>
+            )) || (
+              <div className="col-span-2 p-3 text-center rounded-xl bg-white/[0.02] text-xs text-slate-400">
+                No active pathway. Tap to generate.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Dynamic Recovery Card */}
+        <div className="sportify-card p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold font-tech text-emerald-400 uppercase tracking-wider">
+              <ShieldIcon className="w-3.5 h-3.5" />
+              <span>Strain Recovery</span>
+            </div>
+            <span className="text-[10px] font-mono text-slate-400">
+              {trainingStats.total_minutes || 240} mins load
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            {recovery?.daily_habits?.slice(0, 2).map((habit, idx) => (
+              <div
+                key={idx}
+                className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] text-[11px] text-slate-300 leading-snug font-sans"
+              >
+                {habit}
+              </div>
+            )) || (
+              <p className="text-[11px] text-slate-500">
+                Log workouts to activate strain-aware recovery protocols.
+              </p>
+            )}
+          </div>
+
+          <Link
+            to="/recovery"
+            className="w-full h-9 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center transition-all font-tech uppercase tracking-wider mt-1 active-press"
+          >
+            Open Recovery Center
+          </Link>
+        </div>
       </div>
     </div>
   );
