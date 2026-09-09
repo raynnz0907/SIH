@@ -37,15 +37,10 @@ function App() {
     <AppErrorBoundary>
       <ProfileHydrationGate>
         <Routes>
-          {/* Direct home page: Dashboard loads immediately without any login/signup barrier */}
-          <Route
-            path="/"
-            element={
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            }
-          />
+          {/* Public Landing Page */}
+          <Route path="/" element={<Landing />} />
+
+          {/* Athlete Dashboard */}
           <Route
             path="/dashboard"
             element={

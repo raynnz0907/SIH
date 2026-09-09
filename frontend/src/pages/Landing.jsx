@@ -74,7 +74,7 @@ export default function Landing() {
             <SportifyLogo size="xs" showTagline={false} />
           </Link>
           <Link
-            to="/"
+            to="/dashboard"
             className="text-xs font-bold font-tech uppercase tracking-wider text-slate-300 hover:text-white px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all active:scale-95"
           >
             Enter Studio
@@ -155,7 +155,7 @@ export default function Landing() {
         <footer className="w-full max-w-md mx-auto space-y-3 pt-2 pb-safe">
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
               className="flex-1 h-12 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2 active-press shadow-[0_4px_24px_rgba(255,255,255,0.2)]"
             >
               <span>Launch Dashboard</span>

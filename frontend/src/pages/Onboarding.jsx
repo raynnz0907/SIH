@@ -1,32 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAthleteStore } from '../store/athleteStore';
-import { authAPI, intakeAPI, formatErrorMessage } from '../api/client';
+import { intakeAPI, formatErrorMessage } from '../api/client';
 import SportifyLogo from '../components/common/SportifyLogo';
 import { normalizeSport } from '../config/sportAssessmentConfig';
 import {
-  ArrowRightIcon,
+  CricketIcon,
+  FootballIcon,
+  BasketballIcon,
+  AthleticsIcon,
   CheckIcon,
-  TargetIcon,
-  ZapIcon,
-  DumbbellIcon,
-  ShieldIcon,
+  ArrowRightIcon,
   SlidersIcon,
-  ClockIcon,
-  SportIcon,
+  TargetIcon,
+  DumbbellIcon,
 } from '../components/common/Icons';
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const mode = searchParams.get('mode') || 'signup'; // 'signup' | 'signin' | 'complete-profile'
 
-  const login = useAthleteStore((state) => state.login);
   const setProfile = useAthleteStore((state) => state.setProfile);
-  const athlete = useAthleteStore((state) => state.athlete);
-
-  const isSignIn = mode === 'signin';
-  const isCompleteProfile = mode === 'complete-profile';
+  const storedProfile = useAthleteStore((state) => state.profile);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -34,27 +28,20 @@ export default function Onboarding() {
 
   // Taxonomy & Objectives from backend
   const [sportsData, setSportsData] = useState({});
-  const [objectivesData, setObjectivesData] = useState({});
-
-  // Form State
-  const [authData, setAuthData] = useState({
-    email: '',
-    password: '',
-    full_name: '',
-  });
+  const [objectivesData, setObjectivesData] = useState([]);
 
   const [profileData, setProfileData] = useState({
-    sport: 'cricket',
-    discipline: '',
-    primary_role: 'batsman',
-    sub_role: 'opening_batsman',
-    development_objectives: ['explosiveness'],
-    experience_level: 'intermediate',
-    training_days_per_week: 4,
-    session_duration_minutes: 60,
-    age: 21,
-    weight_kg: 72,
-    height_cm: 178,
+    sport: storedProfile?.sport || 'cricket',
+    discipline: storedProfile?.discipline || '',
+    primary_role: storedProfile?.primary_role || 'batsman',
+    sub_role: storedProfile?.sub_role || 'opening_batsman',
+    development_objectives: storedProfile?.development_objectives || ['explosiveness'],
+    experience_level: storedProfile?.experience_level || 'intermediate',
+    training_days_per_week: storedProfile?.training_days_per_week || 4,
+    session_duration_minutes: storedProfile?.session_duration_minutes || 60,
+    age: storedProfile?.age || 21,
+    weight_kg: storedProfile?.weight_kg || 72,
+    height_cm: storedProfile?.height_cm || 178,
   });
 
   useEffect(() => {
@@ -62,12 +49,12 @@ export default function Onboarding() {
       try {
         const [sports, objs] = await Promise.all([
           intakeAPI.getSports().catch(() => ({})),
-          intakeAPI.getObjectives().catch(() => ({})),
+          intakeAPI.getObjectives().catch(() => []),
         ]);
         setSportsData(sports);
-        setObjectivesData(objs);
+        setObjectivesData(Array.isArray(objs) ? objs : objs?.objectives || []);
 
-        if (sports && sports['cricket']) {
+        if (sports && sports['cricket'] && !storedProfile) {
           const firstRoleKey = Object.keys(sports['cricket'].roles || {})[0] || 'batsman';
           const firstSubKey = Object.keys(sports['cricket'].roles[firstRoleKey]?.sub_roles || {})[0] || '';
           setProfileData((prev) => ({
@@ -81,7 +68,7 @@ export default function Onboarding() {
       }
     }
     loadTaxonomy();
-  }, []);
+  }, [storedProfile]);
 
   const currentSport = sportsData[profileData.sport] || {};
   const currentRoles = currentSport.roles || {};
@@ -128,69 +115,8 @@ export default function Onboarding() {
   };
 
   /**
-   * Dedicated SIGN IN Handler
-   * Authenticates user, hydrates profile from backend, and routes safely.
-   * NEVER calls submitProfile() to prevent overwriting stored profiles!
-   */
-  const handleSignInSubmit = async (e) => {
-    e?.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const loginRes = await authAPI.login({
-        email: authData.email,
-        password: authData.password,
-      });
-
-      const token = loginRes.access_token;
-      if (!token) {
-        throw new Error('Authentication failed. No access token received.');
-      }
-
-      // 1. Temporarily save token in store so axios interceptor uses it
-      login({ email: authData.email }, token, null);
-
-      // 2. Hydrate athlete identity
-      const me = await authAPI.getMe();
-
-      // 3. Fetch existing profile
-      try {
-        const existingProfile = await intakeAPI.getProfile();
-        login(me, token, existingProfile);
-
-        const targetSport = normalizeSport(existingProfile.sport);
-        if (targetSport) {
-          navigate(`/assessment/${targetSport}`);
-        } else {
-          navigate('/dashboard');
-        }
-      } catch (profileErr) {
-        if (profileErr.response?.status === 404) {
-          // Profile not yet created for this user
-          login(me, token, null);
-          setSearchParams({ mode: 'complete-profile' });
-          setStep(1);
-          setError('Welcome back! Please complete your athlete profile configuration.');
-        } else {
-          throw profileErr;
-        }
-      }
-    } catch (err) {
-      setError(
-        formatErrorMessage(
-          err,
-          'Incorrect email or password. Please verify your credentials.'
-        )
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * REGISTRATION or COMPLETE-PROFILE Handler
-   * Creates account (if signup), submits chosen profileData, and routes to assessment.
+   * Completes calibration, persists profile locally, and routes directly to the assessment studio.
+   * Zero account creation, zero email/password required!
    */
   const handleProfileSubmit = async (e) => {
     e?.preventDefault();
@@ -198,30 +124,7 @@ export default function Onboarding() {
     setError(null);
 
     try {
-      let token = useAthleteStore.getState().token;
-      let me = athlete;
-
-      if (!isCompleteProfile) {
-        // Step A: Register Account
-        await authAPI.register({
-          email: authData.email,
-          password: authData.password,
-          full_name: authData.full_name,
-        });
-
-        // Step B: Authenticate
-        const loginRes = await authAPI.login({
-          email: authData.email,
-          password: authData.password,
-        });
-        token = loginRes.access_token;
-        login({ email: authData.email }, token, null);
-
-        me = await authAPI.getMe();
-      }
-
-      // Step C: Save Athlete Profile with selected sport & role data
-      const savedProfile = await intakeAPI.submitProfile({
+      const payload = {
         sport: profileData.sport,
         discipline: profileData.discipline,
         primary_role: profileData.primary_role,
@@ -233,12 +136,17 @@ export default function Onboarding() {
         age: Number(profileData.age),
         weight_kg: Number(profileData.weight_kg),
         height_cm: Number(profileData.height_cm),
+      };
+
+      // Persist in local store
+      setProfile(payload);
+
+      // Submit to backend if available (non-blocking)
+      intakeAPI.submitProfile(payload).catch((err) => {
+        console.warn('Backend intake submit deferred:', err?.message);
       });
 
-      login(me || { email: authData.email }, token, savedProfile);
-      setProfile(savedProfile);
-
-      const targetSport = normalizeSport(savedProfile?.sport || profileData.sport);
+      const targetSport = normalizeSport(profileData.sport);
       navigate(`/assessment/${targetSport || 'cricket'}`);
     } catch (err) {
       setError(
@@ -257,51 +165,45 @@ export default function Onboarding() {
       <div className="w-full max-w-xl mx-auto min-h-[100dvh] flex flex-col justify-between px-4 py-4 sm:py-6 relative z-10">
         {/* Top Header */}
         <div className="w-full flex items-center justify-between mb-3 pt-safe">
-          <SportifyLogo size="xs" showTagline={false} />
-          {!isCompleteProfile && (
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setSearchParams({ mode: isSignIn ? 'signup' : 'signin' });
-              }}
-              className="text-[11px] font-medium text-slate-300 hover:text-white font-tech tracking-wide px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all"
-            >
-              {isSignIn ? 'Need Account? Sign Up' : 'Have Account? Sign In'}
-            </button>
-          )}
+          <Link to="/">
+            <SportifyLogo size="xs" showTagline={false} />
+          </Link>
+          <Link
+            to="/dashboard"
+            className="text-[11px] font-medium text-slate-300 hover:text-white font-tech tracking-wide px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all flex items-center gap-1.5"
+          >
+            <span>Skip to Dashboard</span>
+            <ArrowRightIcon className="w-3 h-3 text-slate-400" />
+          </Link>
         </div>
 
         {/* Main Multi-Step Box */}
         <div className="w-full sportify-card p-4 sm:p-6 border border-white/[0.1] shadow-2xl relative flex-1 flex flex-col justify-between my-2">
-          {/* Step Progress Bar (hidden in sign-in mode) */}
-          {!isSignIn && (
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
-              {[
-                { num: 1, label: 'Sport' },
-                { num: 2, label: 'Goals' },
-                { num: 3, label: 'Biometrics' },
-                ...(!isCompleteProfile ? [{ num: 4, label: 'Account' }] : []),
-              ].map((s) => (
-                <div key={s.num} className="flex items-center gap-1.5">
-                  <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition-all ${
-                      step === s.num
-                        ? 'bg-white text-slate-950 shadow-[0_0_12px_rgba(255,255,255,0.35)]'
-                        : step > s.num
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35'
-                        : 'bg-white/[0.04] text-slate-500 border border-white/[0.06]'
-                    }`}
-                  >
-                    {step > s.num ? <CheckIcon className="w-3 h-3" /> : s.num}
-                  </div>
-                  <span className="text-[10px] font-medium font-tech tracking-wide text-slate-400">
-                    {s.label}
-                  </span>
+          {/* Step Progress Bar (3 steps: Sport, Objectives, Biometrics) */}
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
+            {[
+              { num: 1, label: 'Sport' },
+              { num: 2, label: 'Objectives' },
+              { num: 3, label: 'Biometrics' },
+            ].map((s) => (
+              <div key={s.num} className="flex items-center gap-1.5">
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition-all ${
+                    step === s.num
+                      ? 'bg-white text-slate-950 shadow-[0_0_12px_rgba(255,255,255,0.35)]'
+                      : step > s.num
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35'
+                      : 'bg-white/[0.04] text-slate-500 border border-white/[0.06]'
+                  }`}
+                >
+                  {step > s.num ? <CheckIcon className="w-3 h-3" /> : s.num}
                 </div>
-              ))}
-            </div>
-          )}
+                <span className="text-[10px] font-medium font-tech tracking-wide text-slate-400">
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
 
           {/* Error Notification */}
           {error && (
@@ -311,184 +213,107 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* ── DEDICATED SIGN IN FORM ────────────────────────────────────────── */}
-          {isSignIn && (
-            <form onSubmit={handleSignInSubmit} className="space-y-3.5 my-auto">
-              <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Sign In to Sportify
-                </h2>
-                <p className="text-xs text-slate-400 font-sans">
-                  Access your personalized biomechanical telemetry and development pathway.
-                </p>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="athlete@sportify.com"
-                  value={authData.email}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, email: e.target.value })
-                  }
-                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={authData.password}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, password: e.target.value })
-                  }
-                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`w-full h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs ${
-                    loading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-                  {!loading && <ArrowRightIcon className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-
-              <p className="text-center text-xs text-slate-500 pt-2">
-                New athlete?{' '}
-                <button
-                  type="button"
-                  onClick={() => setSearchParams({ mode: 'signup' })}
-                  className="text-white hover:underline font-tech font-bold"
-                >
-                  Create your athlete profile
-                </button>
-              </p>
-            </form>
-          )}
-
-          {/* ── STEP 1: SPORT, DISCIPLINE & ROLE ───────────────────────────────── */}
-          {!isSignIn && step === 1 && (
-            <div className="space-y-3.5">
+          {/* ── STEP 1: SPORT & ROLE SELECTION ──────────────────────────────── */}
+          {step === 1 && (
+            <div className="space-y-4">
               <div>
                 <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
                   Select Sport & Role
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Configures custom biomechanical demand weights and calibrated movement protocols.
+                  Choose your sport and tactical playing position to calibrate role-specific benchmarks.
                 </p>
               </div>
 
               {/* Sport Selector */}
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 tracking-wider block mb-1.5">
-                  Primary Sport
+                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
+                  Sport
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.keys(sportsData).map((sportKey) => (
-                    <button
-                      key={sportKey}
-                      type="button"
-                      onClick={() => handleSportSelect(sportKey)}
-                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
-                        profileData.sport === sportKey
-                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                          : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                      }`}
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0">
-                        <SportIcon sport={sportKey} className="w-3.5 h-3.5 text-slate-200" />
-                      </div>
-                      <span className="text-xs font-bold font-tech capitalize truncate">
-                        {sportsData[sportKey].name}
-                      </span>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'cricket', label: 'Cricket', icon: CricketIcon },
+                    { id: 'football', label: 'Football', icon: FootballIcon },
+                    { id: 'basketball', label: 'Basketball', icon: BasketballIcon },
+                    { id: 'athletics', label: 'Athletics', icon: AthleticsIcon },
+                  ].map((s) => {
+                    const Icon = s.icon;
+                    const isSelected = profileData.sport === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => handleSportSelect(s.id)}
+                        className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
+                          isSelected
+                            ? 'bg-white/[0.08] border-white/30 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6)]'
+                            : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
+                        <span className="text-[11px] font-bold font-tech tracking-tight">{s.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Primary Role Selector */}
+              {/* Position / Role Selector */}
               {Object.keys(currentRoles).length > 0 && (
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 tracking-wider block mb-1.5">
-                    Tactical Role / Position
+                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
+                    Primary Position
                   </label>
-                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-0.5">
-                    {Object.keys(currentRoles).map((roleKey) => (
-                      <button
-                        key={roleKey}
-                        type="button"
-                        onClick={() => handleRoleSelect(roleKey)}
-                        className={`p-2 rounded-xl border text-left transition-all ${
-                          profileData.primary_role === roleKey
-                            ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                            : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold font-tech capitalize truncate">
-                            {currentRoles[roleKey].title || roleKey.replace(/_/g, ' ')}
-                          </p>
-                          {profileData.primary_role === roleKey && (
-                            <CheckIcon className="w-3 h-3 text-emerald-400 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {currentRoles[roleKey].description}
-                        </p>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                    {Object.keys(currentRoles).map((rKey) => {
+                      const rObj = currentRoles[rKey];
+                      const isSelected = profileData.primary_role === rKey;
+                      return (
+                        <button
+                          key={rKey}
+                          type="button"
+                          onClick={() => handleRoleSelect(rKey)}
+                          className={`p-2 rounded-xl border text-left transition-all ${
+                            isSelected
+                              ? 'bg-white/[0.08] border-white/30 text-white'
+                              : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <div className="text-xs font-bold font-sans truncate">{rObj.name || rKey}</div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Sub-Role Selector */}
+              {/* Sub-Role / Tactical Specialty */}
               {Object.keys(currentSubRoles).length > 0 && (
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 tracking-wider block mb-1.5">
-                    Specialist Sub-Role
+                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
+                    Tactical Specialty / Sub-Role
                   </label>
-                  <div className="grid grid-cols-1 gap-1.5 max-h-32 overflow-y-auto pr-0.5">
-                    {Object.keys(currentSubRoles).map((subKey) => (
-                      <button
-                        key={subKey}
-                        type="button"
-                        onClick={() =>
-                          setProfileData((prev) => ({ ...prev, sub_role: subKey }))
-                        }
-                        className={`p-2 rounded-xl border text-left transition-all ${
-                          profileData.sub_role === subKey
-                            ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                            : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold font-tech capitalize truncate">
-                            {currentSubRoles[subKey].title || subKey.replace(/_/g, ' ')}
-                          </span>
-                          {profileData.sub_role === subKey && (
-                            <CheckIcon className="w-3 h-3 text-emerald-400 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {currentSubRoles[subKey].description}
-                        </p>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {Object.keys(currentSubRoles).map((srKey) => {
+                      const srObj = currentSubRoles[srKey];
+                      const isSelected = profileData.sub_role === srKey;
+                      return (
+                        <button
+                          key={srKey}
+                          type="button"
+                          onClick={() => setProfileData({ ...profileData, sub_role: srKey })}
+                          className={`p-2 rounded-xl border text-left transition-all ${
+                            isSelected
+                              ? 'bg-white/[0.08] border-white/30 text-white'
+                              : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          <div className="text-xs font-bold font-sans truncate">
+                            {srObj.name || srKey.replace(/_/g, ' ')}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -496,7 +321,7 @@ export default function Onboarding() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="w-full h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+                className="w-full h-11 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2 mt-2"
               >
                 <span>Next: Objectives</span>
                 <ArrowRightIcon className="w-3.5 h-3.5" />
@@ -504,42 +329,51 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* ── STEP 2: OBJECTIVES & GOALS ─────────────────────────────────────── */}
-          {!isSignIn && step === 2 && (
+          {/* ── STEP 2: OBJECTIVES ──────────────────────────────────────────── */}
+          {step === 2 && (
             <div className="space-y-4">
               <div>
                 <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Focus Objectives
+                  Development Objectives
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Select your primary physical and biomechanical development goals.
+                  Select key physical and tactical qualities you want the pathway to prioritize.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-0.5">
-                {Object.keys(objectivesData).map((objKey) => {
-                  const isSelected = profileData.development_objectives?.includes(objKey);
+              <div className="space-y-2">
+                {[
+                  { id: 'explosiveness', name: 'Explosive Power', desc: 'Vertical impulse, acceleration, and force rate' },
+                  { id: 'deceleration', name: 'Deceleration & Landing Control', desc: 'Eccentric knee absorption and landing stability' },
+                  { id: 'rotational_power', name: 'Rotational Velocity', desc: 'Torso torque, kinetic whip, and core sequencing' },
+                  { id: 'joint_stability', name: 'Joint Stability & Prehab', desc: 'Knee valgus resistance, ankle stiffness, and shoulder health' },
+                  { id: 'first_step', name: 'First-Step Quickness', desc: 'Lateral change-of-direction and reactive takeoff' },
+                ].map((obj) => {
+                  const isChecked = profileData.development_objectives?.includes(obj.id);
                   return (
-                    <button
-                      key={objKey}
-                      type="button"
-                      onClick={() => toggleObjective(objKey)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        isSelected
-                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                          : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    <div
+                      key={obj.id}
+                      onClick={() => toggleObjective(obj.id)}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                        isChecked
+                          ? 'bg-white/[0.07] border-white/25 text-white shadow-sm'
+                          : 'bg-white/[0.02] border-white/[0.06] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-bold font-tech capitalize">
-                          {objectivesData[objKey].title || objKey.replace(/_/g, ' ')}
-                        </span>
-                        {isSelected && <CheckIcon className="w-3.5 h-3.5 text-emerald-400" />}
+                      <div
+                        className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center shrink-0 transition-all ${
+                          isChecked
+                            ? 'bg-white text-slate-950'
+                            : 'border border-white/20 bg-white/[0.02]'
+                        }`}
+                      >
+                        {isChecked && <CheckIcon className="w-3 h-3" />}
                       </div>
-                      <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
-                        {objectivesData[objKey].description}
-                      </p>
-                    </button>
+                      <div>
+                        <div className="text-xs font-bold text-white font-sans">{obj.name}</div>
+                        <div className="text-[11px] text-slate-400 font-sans mt-0.5">{obj.desc}</div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -555,7 +389,7 @@ export default function Onboarding() {
                 <button
                   type="button"
                   onClick={() => setStep(3)}
-                  className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+                  className="w-2/3 h-11 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2"
                 >
                   <span>Next: Biometrics</span>
                   <ArrowRightIcon className="w-3.5 h-3.5" />
@@ -564,18 +398,19 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* ── STEP 3: BIOMETRICS & TRAINING CONTEXT ──────────────────────────── */}
-          {!isSignIn && step === 3 && (
+          {/* ── STEP 3: BIOMETRICS & TIER ────────────────────────────────────── */}
+          {step === 3 && (
             <div className="space-y-4">
               <div>
                 <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Physical Biometrics
+                  Biometrics & Tier
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Calibrates baseline force ratios, workload endurance limits, and injury-risk models.
+                  Helps calibrate kinetic power benchmarks and volume loading.
                 </p>
               </div>
 
+              {/* Age, Height, Weight */}
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
@@ -583,13 +418,13 @@ export default function Onboarding() {
                   </label>
                   <input
                     type="number"
-                    min="10"
+                    min="12"
                     max="65"
                     value={profileData.age}
                     onChange={(e) =>
                       setProfileData({ ...profileData, age: e.target.value })
                     }
-                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center"
+                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center rounded-xl bg-white/[0.04] border border-white/10 text-white"
                   />
                 </div>
                 <div>
@@ -604,7 +439,7 @@ export default function Onboarding() {
                     onChange={(e) =>
                       setProfileData({ ...profileData, height_cm: e.target.value })
                     }
-                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center"
+                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center rounded-xl bg-white/[0.04] border border-white/10 text-white"
                   />
                 </div>
                 <div>
@@ -619,12 +454,12 @@ export default function Onboarding() {
                     onChange={(e) =>
                       setProfileData({ ...profileData, weight_kg: e.target.value })
                     }
-                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center"
+                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center rounded-xl bg-white/[0.04] border border-white/10 text-white"
                   />
                 </div>
               </div>
 
-              {/* Experience Level */}
+              {/* Competitive Tier */}
               <div>
                 <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
                   Competitive Tier
@@ -639,17 +474,57 @@ export default function Onboarding() {
                       }
                       className={`h-9 rounded-xl border text-[11px] font-bold capitalize flex items-center justify-center transition-all ${
                         profileData.experience_level === lvl
-                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
+                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6)]'
                           : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
                       }`}
                     >
-                      {lvl.slice(0, 5)}
+                      {lvl}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5 pt-1">
+              {/* Training Availability */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                    Days / Week
+                  </label>
+                  <select
+                    value={profileData.training_days_per_week}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, training_days_per_week: Number(e.target.value) })
+                    }
+                    className="w-full h-11 px-3 sportify-input text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white font-mono"
+                  >
+                    {[2, 3, 4, 5, 6].map((d) => (
+                      <option key={d} value={d} className="bg-[#0C0E14] text-white">
+                        {d} Days
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                    Session Duration
+                  </label>
+                  <select
+                    value={profileData.session_duration_minutes}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, session_duration_minutes: Number(e.target.value) })
+                    }
+                    className="w-full h-11 px-3 sportify-input text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white font-mono"
+                  >
+                    {[30, 45, 60, 75, 90].map((m) => (
+                      <option key={m} value={m} className="bg-[#0C0E14] text-white">
+                        {m} Mins
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setStep(2)}
@@ -658,112 +533,19 @@ export default function Onboarding() {
                   Back
                 </button>
 
-                {isCompleteProfile ? (
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={handleProfileSubmit}
-                    className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs ${
-                      loading ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    <span>{loading ? 'Saving...' : 'Save Profile'}</span>
-                    {!loading && <ArrowRightIcon className="w-3.5 h-3.5" />}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setStep(4)}
-                    className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
-                  >
-                    <span>Next: Account</span>
-                    <ArrowRightIcon className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 4: ACCOUNT CREATION (SIGNUP ONLY) ───────────────────────── */}
-          {!isSignIn && !isCompleteProfile && step === 4 && (
-            <form onSubmit={handleProfileSubmit} className="space-y-3.5">
-              <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Create Athlete Account
-                </h2>
-                <p className="text-xs text-slate-400 font-sans">
-                  Your profile, movement assessments, and training pathways sync securely across devices.
-                </p>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Cristiano Ronaldo"
-                  value={authData.full_name}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, full_name: e.target.value })
-                  }
-                  className="w-full h-11 px-3.5 sportify-input text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="athlete@sportify.com"
-                  value={authData.email}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, email: e.target.value })
-                  }
-                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  value={authData.password}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, password: e.target.value })
-                  }
-                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
-                />
-              </div>
-
-              <div className="flex items-center gap-2.5 pt-1">
                 <button
                   type="button"
-                  onClick={() => setStep(3)}
-                  className="w-1/3 h-11 btn-secondary text-xs flex items-center justify-center"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
                   disabled={loading}
-                  className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs ${
+                  onClick={handleProfileSubmit}
+                  className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs shadow-[0_4px_20px_rgba(255,255,255,0.2)] ${
                     loading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  <span>{loading ? 'Creating...' : 'Launch Studio'}</span>
+                  <span>{loading ? 'Configuring...' : 'Launch Studio'}</span>
                   {!loading && <ArrowRightIcon className="w-3.5 h-3.5" />}
                 </button>
               </div>
-            </form>
+            </div>
           )}
         </div>
       </div>
