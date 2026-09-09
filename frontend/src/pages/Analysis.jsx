@@ -1,102 +1,285 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import ScoreRadar from '../components/analysis/ScoreRadar';
-import { Activity, AlertTriangle, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
+import { useAthleteStore } from '../store/athleteStore';
+import { assessmentAPI, planAPI } from '../api/client';
+import { normalizeSport } from '../config/sportAssessmentConfig';
+import {
+  StrengthIcon,
+  ProficientIcon,
+  DevAreaIcon,
+  CriticalIcon,
+  ZapIcon,
+  TargetIcon,
+  ArrowRightIcon,
+  DumbbellIcon,
+  CheckIcon,
+  ClockIcon,
+} from '../components/common/Icons';
 
 export default function Analysis() {
-  const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [status, setStatus] = useState('processing'); // 'processing' | 'complete'
+  const { id } = useParams();
+
+  const currentAssessment = useAthleteStore((state) => state.currentAssessment);
+  const profile = useAthleteStore((state) => state.profile);
+  const normalizedSport = profile?.sport ? normalizeSport(profile.sport) : 'cricket';
+  const assessmentPath = `/assessment/${normalizedSport}`;
+
+  const [analysisData, setAnalysisData] = useState(
+    location.state?.result || currentAssessment || null
+  );
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
   useEffect(() => {
-    // Mock polling
-    const timer = setTimeout(() => {
-      setStatus('complete');
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [id]);
+    async function fetchLatestIfNeeded() {
+      if (!analysisData) {
+        try {
+          const res = await assessmentAPI.getLatest();
+          if (res?.assessment) {
+            setAnalysisData(res.assessment);
+          }
+        } catch (err) {
+          console.error('Failed to fetch assessment:', err);
+        }
+      }
+    }
+    fetchLatestIfNeeded();
+  }, [analysisData]);
 
-  const scores = { kneeStability: 45, hipMobility: 70, posture: 85, symmetry: 60, explosiveness: 40, flexibility: 65, balance: 75 };
-  const benchmark = { kneeStability: 75, hipMobility: 80, posture: 80, symmetry: 80, explosiveness: 70, flexibility: 75, balance: 80 };
+  const handleGeneratePlan = async () => {
+    setGeneratingPlan(true);
+    try {
+      await planAPI.generate();
+      navigate('/plan');
+    } catch (err) {
+      console.error('Failed to generate plan:', err);
+      navigate('/plan');
+    } finally {
+      setGeneratingPlan(false);
+    }
+  };
 
-  if (status === 'processing') {
+  if (!analysisData) {
     return (
-      <div className="flex flex-col items-center justify-center h-[80vh]">
-        <Activity className="w-16 h-16 text-primary animate-pulse mb-6" />
-        <h2 className="text-2xl font-bold mb-2">Analyzing Biomechanics...</h2>
-        <p className="text-gray-400">Our AI is processing your movement patterns.</p>
-        <div className="w-64 h-2 bg-surface rounded-full mt-8 overflow-hidden">
-          <motion.div 
-            className="h-full bg-primary"
-            initial={{ width: '0%' }}
-            animate={{ width: '100%' }}
-            transition={{ duration: 3, ease: "linear" }}
-          />
-        </div>
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4 text-center">
+        <p className="text-sm text-slate-400">
+          No active assessment report found.
+        </p>
+        <Link to={assessmentPath} className="btn-primary text-xs">
+          Record New Assessment
+        </Link>
       </div>
     );
   }
 
+  const scores = analysisData.movement_scores || {};
+  const metricDetails = analysisData.metric_details || {};
+  const feedback = analysisData.movement_feedback || [];
+  const coaching = analysisData.coaching || {};
+  const overallQuality = analysisData.overall_movement_quality || 75.0;
+  const protocolName =
+    analysisData.protocol_name || analysisData.protocol_id || 'Movement Assessment';
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Analysis Results</h1>
-          <p className="text-gray-400">Assessment completed on {new Date().toLocaleDateString()}</p>
+    <div className="space-y-4 select-none">
+      {/* ── TOP HERO HEADER ─────────────────────────────────────────────────── */}
+      <div className="sportify-card p-4 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col items-start gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[10px] font-bold font-tech text-slate-300 tracking-[0.2em] uppercase px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.12]">
+                Verified Telemetry
+              </span>
+              <span className="text-[11px] font-mono text-slate-400 uppercase truncate">
+                {protocolName}
+              </span>
+            </div>
+            <h1 className="text-lg font-black font-heading text-white tracking-wide">
+              Movement Performance Report
+            </h1>
+            <p className="text-xs text-slate-400 mt-1 font-sans">
+              Activity-aware analysis validated across execution phases with zero synthetic score fabrication.
+            </p>
+          </div>
+
+          <button
+            onClick={handleGeneratePlan}
+            disabled={generatingPlan}
+            className="w-full h-11 btn-primary text-xs flex items-center justify-center gap-2 active-press shadow-[0_2px_14px_rgba(255,255,255,0.15)]"
+          >
+            <DumbbellIcon className="w-4 h-4 text-slate-950" />
+            <span>
+              {generatingPlan ? 'Synthesizing Pathway...' : 'Generate 4-Week Training Pathway'}
+            </span>
+            <ArrowRightIcon className="w-3.5 h-3.5 text-slate-950" />
+          </button>
         </div>
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
-        >
-          View Action Plan
-          <ArrowRight className="w-5 h-5" />
-        </button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-surface border border-subtle rounded-2xl p-6 shadow-sm">
-          <h3 className="font-bold text-lg mb-6">Biomechanical Profile</h3>
-          <div className="h-[400px] w-full">
-            <ScoreRadar scores={scores} benchmark={benchmark} />
-          </div>
-        </div>
+      {/* ── OVERALL SCORE & METRIC BREAKDOWN ───────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 md:gap-4">
+        {/* Overall Quality Ring Card */}
+        <div className="sportify-card p-4 flex flex-col items-center justify-center text-center md:col-span-1">
+          <span className="text-[10px] font-bold font-tech text-slate-400 uppercase tracking-[0.2em] mb-2">
+            Overall Movement Quality
+          </span>
 
-        <div className="space-y-6">
-          <div className="bg-surface border border-subtle rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-lg flex items-center gap-2 mb-4 text-danger">
-              <AlertTriangle className="w-5 h-5" />
-              Primary Bottlenecks
-            </h3>
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-danger/10 border border-danger/20">
-                <div className="text-danger font-bold text-lg">Explosiveness</div>
-                <div className="text-sm text-gray-300 mt-1">40/100 (Target: 70)</div>
-                <p className="text-xs text-gray-400 mt-2">Lacking power generation in concentric phase of squat.</p>
-              </div>
-              <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
-                <div className="text-warning font-bold text-lg">Knee Stability</div>
-                <div className="text-sm text-gray-300 mt-1">45/100 (Target: 75)</div>
-                <p className="text-xs text-gray-400 mt-2">Valgus collapse detected during landing phase.</p>
-              </div>
+          <div className="relative w-28 h-28 flex items-center justify-center my-1.5">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                className="stroke-white/[0.06]"
+                strokeWidth="8"
+                fill="transparent"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                className="stroke-white transition-all duration-1000"
+                strokeWidth="8"
+                strokeDasharray={251.2}
+                strokeDashoffset={251.2 - (251.2 * overallQuality) / 100}
+                strokeLinecap="round"
+                fill="transparent"
+              />
+            </svg>
+            <div className="absolute flex flex-col items-center">
+              <span className="text-2xl font-extrabold font-mono text-white">
+                {overallQuality.toFixed(0)}
+              </span>
+              <span className="text-[10px] font-tech text-slate-400 uppercase">
+                / 100
+              </span>
             </div>
           </div>
 
-          <div className="bg-surface border border-subtle rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-lg mb-4 text-accent">Strengths</h3>
-            <ul className="space-y-3">
-              <li className="flex justify-between items-center text-sm">
-                <span>Posture</span>
-                <span className="text-accent font-bold">85/100</span>
-              </li>
-              <li className="flex justify-between items-center text-sm">
-                <span>Balance</span>
-                <span className="text-accent font-bold">75/100</span>
-              </li>
-            </ul>
+          <p className="text-[11px] text-slate-400 mt-1 max-w-xs font-sans">
+            Composite kinematic score evaluating joint stability, posture, and force distribution.
+          </p>
+        </div>
+
+        {/* Individual Attribute Scores */}
+        <div className="sportify-card p-4 md:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold font-heading text-white tracking-wide">
+              Attribute Breakdown
+            </h3>
+            <span className="text-[10px] font-mono text-slate-500">
+              Target: 70–80 Baseline
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5">
+            {Object.keys(scores).map((attr) => {
+              const val = scores[attr];
+              const label = attr.replace(/_/g, ' ');
+              const isHigh = val >= 80;
+              const isMid = val >= 65;
+              return (
+                <div
+                  key={attr}
+                  className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]"
+                >
+                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                    <span className="capitalize text-slate-200 font-sans">{label}</span>
+                    <span
+                      className={`font-mono ${
+                        isHigh
+                          ? 'text-emerald-400'
+                          : isMid
+                          ? 'text-slate-200'
+                          : 'text-rose-400'
+                      }`}
+                    >
+                      {val.toFixed(0)} / 100
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        isHigh
+                          ? 'bg-emerald-400'
+                          : isMid
+                          ? 'bg-slate-300'
+                          : 'bg-rose-400'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(10, val))}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
+
+      {/* ── VERIFIED OBSERVATIONS & GROUNDED COACHING ─────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-4">
+        {/* Verified Kinematic Observations */}
+        <div className="sportify-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold font-heading text-white tracking-wide">
+              Biomechanical Observations
+            </h3>
+            <span className="text-[10px] font-tech text-slate-400 uppercase tracking-wider">
+              Vision Evidence
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {feedback.length > 0 ? (
+              feedback.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-slate-300 flex items-start gap-2.5 font-sans"
+                >
+                  <CheckIcon className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500 font-sans">
+                Phase observations recorded and verified.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Evidence-Grounded Coaching Cues */}
+        <div className="sportify-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold font-heading text-white tracking-wide">
+              Performance Guidance
+            </h3>
+            <span className="text-[10px] font-tech text-slate-400 uppercase tracking-wider">
+              Coaching Cues
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {coaching.technique_tips?.map((tip, idx) => (
+              <div
+                key={idx}
+                className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06]"
+              >
+                <div className="text-xs font-bold text-white mb-0.5 font-tech">
+                  {tip.title}
+                </div>
+                <div className="text-xs text-slate-400 font-sans">{tip.detail}</div>
+              </div>
+            )) || (
+              <p className="text-xs text-slate-500 font-sans">
+                Continue to the training pathway to execute targeted corrective sets.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

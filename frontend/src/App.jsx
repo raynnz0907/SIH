@@ -1,9 +1,15 @@
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAthleteStore } from './store/athleteStore';
+
+// Error Boundary & Hydration Gate
+import AppErrorBoundary from './components/common/AppErrorBoundary';
+import ProfileHydrationGate from './components/common/ProfileHydrationGate';
 
 // Pages
 import Landing from './pages/Landing';
 import Onboarding from './pages/Onboarding';
+import SportAssessmentPage from './pages/SportAssessmentPage';
 import VideoCapture from './pages/VideoCapture';
 import Analysis from './pages/Analysis';
 import Dashboard from './pages/Dashboard';
@@ -12,85 +18,112 @@ import RecoveryPlan from './pages/RecoveryPlan';
 import Progress from './pages/Progress';
 
 // Components
-import Navbar from './components/layout/Navbar';
-import Sidebar from './components/layout/Sidebar';
+import MobileTopBar from './components/layout/MobileTopBar';
+import MobileBottomNav from './components/layout/MobileBottomNav';
 
 const ProtectedRoute = ({ children }) => {
+  const token = useAthleteStore((state) => state.token);
   const isAuthenticated = useAthleteStore((state) => state.isAuthenticated);
-  if (!isAuthenticated) return <Navigate to="/onboarding" replace />;
+
+  if (!token && !isAuthenticated) {
+    return <Navigate to="/onboarding?mode=signin" replace />;
+  }
+
   return children;
 };
 
 const AppLayout = ({ children }) => {
   return (
-    <div className="flex min-h-screen" style={{ background: '#000005' }}>
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen">
-        <Navbar />
-        <main className="flex-1 p-5 md:p-8 max-w-7xl mx-auto w-full">
-          {children}
-        </main>
-      </div>
+    <div className="min-h-[100dvh] bg-[#07080C] text-[#F1F5F9] flex flex-col w-full selection:bg-white/20 relative">
+      <MobileTopBar />
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 pb-28 md:pb-8">
+        {children}
+      </main>
+      <MobileBottomNav />
     </div>
   );
 };
 
-
-
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/onboarding" element={<Onboarding />} />
-      <Route
-        path="/video"
-        element={
-          <ProtectedRoute>
-            <AppLayout><VideoCapture /></AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/analysis/:id"
-        element={
-          <ProtectedRoute>
-            <AppLayout><Analysis /></AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <AppLayout><Dashboard /></AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/plan"
-        element={
-          <ProtectedRoute>
-            <AppLayout><TrainingPlan /></AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/recovery"
-        element={
-          <ProtectedRoute>
-            <AppLayout><RecoveryPlan /></AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/progress"
-        element={
-          <ProtectedRoute>
-            <AppLayout><Progress /></AppLayout>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <AppErrorBoundary>
+      <ProfileHydrationGate>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route
+            path="/assessment/:sport"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <SportAssessmentPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/video"
+            element={
+              <ProtectedRoute>
+                <VideoCapture />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analysis/:id"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Analysis />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Dashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/plan"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <TrainingPlan />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recovery"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <RecoveryPlan />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/progress"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Progress />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Catch-all route to prevent blank screens */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ProfileHydrationGate>
+    </AppErrorBoundary>
   );
 }
 

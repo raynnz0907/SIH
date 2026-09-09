@@ -1,0 +1,617 @@
+{
+  "sports": {
+    "cricket": {
+      "name": "Cricket",
+      "emoji": "🏏",
+      "disciplines": [
+        { "id": "t20", "name": "T20 Cricket" },
+        { "id": "one_day", "name": "One Day (50-over)" },
+        { "id": "multi_day", "name": "Multi-Day / Test" }
+      ],
+      "roles": {
+        "batsman": {
+          "title": "Batsman",
+          "description": "Specialist batter responsible for building innings, executing attacking strokes, and maintaining match tempo.",
+          "sub_roles": {
+            "opening_batsman": {
+              "title": "Opening Batsman",
+              "description": "Faces the new ball against high pace and swing; requires razor-sharp reactive footwork, front-knee stability, and balanced head position.",
+              "primary_movement_patterns": ["forward_press", "defensive_stride", "cover_drive", "pull_shot"],
+              "attribute_weights": {
+                "balance": 0.25,
+                "upper_body_posture": 0.20,
+                "knee_stability": 0.20,
+                "movement_symmetry": 0.15,
+                "explosive_capacity": 0.10,
+                "hip_mobility": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "balance": 60, "upper_body_posture": 60, "knee_stability": 58, "movement_symmetry": 55, "explosive_capacity": 50, "hip_mobility": 52 },
+                "intermediate": { "balance": 74, "upper_body_posture": 74, "knee_stability": 72, "movement_symmetry": 70, "explosive_capacity": 65, "hip_mobility": 68 },
+                "advanced":     { "balance": 86, "upper_body_posture": 86, "knee_stability": 84, "movement_symmetry": 82, "explosive_capacity": 78, "hip_mobility": 80 },
+                "elite":        { "balance": 92, "upper_body_posture": 92, "knee_stability": 90, "movement_symmetry": 88, "explosive_capacity": 85, "hip_mobility": 88 }
+              }
+            },
+            "middle_order_batsman": {
+              "title": "Middle-Order Batsman",
+              "description": "Constructs partnerships through middle overs; requires agile running between wickets, rotational drive, and stroke versatility.",
+              "primary_movement_patterns": ["drive_mechanics", "rotational_sweep", "quick_running_deceleration"],
+              "attribute_weights": {
+                "hip_mobility": 0.25,
+                "balance": 0.20,
+                "knee_stability": 0.20,
+                "explosive_capacity": 0.15,
+                "upper_body_posture": 0.10,
+                "movement_symmetry": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "hip_mobility": 58, "balance": 58, "knee_stability": 56, "explosive_capacity": 54, "upper_body_posture": 56, "movement_symmetry": 54 },
+                "intermediate": { "hip_mobility": 72, "balance": 72, "knee_stability": 70, "explosive_capacity": 68, "upper_body_posture": 70, "movement_symmetry": 68 },
+                "advanced":     { "hip_mobility": 85, "balance": 84, "knee_stability": 82, "explosive_capacity": 80, "upper_body_posture": 82, "movement_symmetry": 80 },
+                "elite":        { "hip_mobility": 92, "balance": 90, "knee_stability": 88, "explosive_capacity": 88, "upper_body_posture": 88, "movement_symmetry": 86 }
+              }
+            },
+            "finisher": {
+              "title": "Power Finisher",
+              "description": "Executes boundary-scoring and power hitting in death overs; relies on maximal explosive hip drive and rotational force generation.",
+              "primary_movement_patterns": ["rotational_power_clearing", "explosive_stance_shift", "launch_extension"],
+              "attribute_weights": {
+                "explosive_capacity": 0.35,
+                "hip_mobility": 0.25,
+                "balance": 0.15,
+                "knee_stability": 0.15,
+                "upper_body_posture": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 62, "hip_mobility": 56, "balance": 55, "knee_stability": 55, "upper_body_posture": 52 },
+                "intermediate": { "explosive_capacity": 76, "hip_mobility": 70, "balance": 68, "knee_stability": 68, "upper_body_posture": 66 },
+                "advanced":     { "explosive_capacity": 88, "hip_mobility": 84, "balance": 80, "knee_stability": 80, "upper_body_posture": 78 },
+                "elite":        { "explosive_capacity": 94, "hip_mobility": 90, "balance": 86, "knee_stability": 86, "upper_body_posture": 84 }
+              }
+            }
+          }
+        },
+        "bowler": {
+          "title": "Bowler",
+          "description": "Specialist bowler delivering pace, seam, or spin to dismiss opposing batters.",
+          "sub_roles": {
+            "fast_bowler": {
+              "title": "Pace / Fast Bowler",
+              "description": "High-impact delivery stride and explosive run-up; demands elite knee deceleration stability, braced front-leg extension, and trunk anti-rotation.",
+              "primary_movement_patterns": ["approach_sprint", "bound_gather", "delivery_stride_brace", "follow_through_deceleration"],
+              "attribute_weights": {
+                "knee_stability": 0.30,
+                "explosive_capacity": 0.30,
+                "upper_body_posture": 0.15,
+                "hip_mobility": 0.15,
+                "movement_symmetry": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "knee_stability": 60, "explosive_capacity": 60, "upper_body_posture": 55, "hip_mobility": 55, "movement_symmetry": 52 },
+                "intermediate": { "knee_stability": 75, "explosive_capacity": 75, "upper_body_posture": 70, "hip_mobility": 68, "movement_symmetry": 66 },
+                "advanced":     { "knee_stability": 88, "explosive_capacity": 88, "upper_body_posture": 82, "hip_mobility": 80, "movement_symmetry": 78 },
+                "elite":        { "knee_stability": 94, "explosive_capacity": 94, "upper_body_posture": 90, "hip_mobility": 88, "movement_symmetry": 85 }
+              }
+            },
+            "spin_bowler": {
+              "title": "Spin Bowler (Wrist/Finger)",
+              "description": "Generates revolutions and flight through thoracic rotation, shoulder pivot, and dynamic balance at the crease.",
+              "primary_movement_patterns": ["rotational_pivot", "crease_balance", "upper_body_extension"],
+              "attribute_weights": {
+                "balance": 0.30,
+                "hip_mobility": 0.25,
+                "upper_body_posture": 0.20,
+                "knee_stability": 0.15,
+                "explosive_capacity": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "balance": 62, "hip_mobility": 58, "upper_body_posture": 58, "knee_stability": 54, "explosive_capacity": 48 },
+                "intermediate": { "balance": 76, "hip_mobility": 72, "upper_body_posture": 72, "knee_stability": 68, "explosive_capacity": 62 },
+                "advanced":     { "balance": 88, "hip_mobility": 85, "upper_body_posture": 84, "knee_stability": 80, "explosive_capacity": 74 },
+                "elite":        { "balance": 94, "hip_mobility": 92, "upper_body_posture": 90, "knee_stability": 86, "explosive_capacity": 80 }
+              }
+            }
+          }
+        },
+        "all_rounder": {
+          "title": "All-Rounder",
+          "description": "Dual-threat athlete contributing with both bat and ball under varying match demands.",
+          "sub_roles": {
+            "batting_all_rounder": {
+              "title": "Batting All-Rounder",
+              "description": "Primary batter with reliable bowling utility; requires high all-round structural symmetry and endurance balance.",
+              "primary_movement_patterns": ["batting_drives", "medium_pace_bowling", "fielding_agility"],
+              "attribute_weights": {
+                "balance": 0.25,
+                "knee_stability": 0.20,
+                "hip_mobility": 0.20,
+                "explosive_capacity": 0.20,
+                "upper_body_posture": 0.15
+              },
+              "benchmarks": {
+                "beginner":     { "balance": 58, "knee_stability": 58, "hip_mobility": 56, "explosive_capacity": 55, "upper_body_posture": 55 },
+                "intermediate": { "balance": 72, "knee_stability": 72, "hip_mobility": 70, "explosive_capacity": 70, "upper_body_posture": 68 },
+                "advanced":     { "balance": 85, "knee_stability": 84, "hip_mobility": 82, "explosive_capacity": 82, "upper_body_posture": 80 },
+                "elite":        { "balance": 90, "knee_stability": 90, "hip_mobility": 88, "explosive_capacity": 88, "upper_body_posture": 86 }
+              }
+            },
+            "bowling_all_rounder": {
+              "title": "Bowling All-Rounder",
+              "description": "Primary strike bowler with lower-order power batting ability.",
+              "primary_movement_patterns": ["fast_bowling_delivery", "power_hitting", "boundary_fielding"],
+              "attribute_weights": {
+                "knee_stability": 0.25,
+                "explosive_capacity": 0.25,
+                "hip_mobility": 0.20,
+                "balance": 0.15,
+                "upper_body_posture": 0.15
+              },
+              "benchmarks": {
+                "beginner":     { "knee_stability": 60, "explosive_capacity": 60, "hip_mobility": 55, "balance": 55, "upper_body_posture": 54 },
+                "intermediate": { "knee_stability": 74, "explosive_capacity": 74, "hip_mobility": 68, "balance": 68, "upper_body_posture": 68 },
+                "advanced":     { "knee_stability": 86, "explosive_capacity": 86, "hip_mobility": 80, "balance": 80, "upper_body_posture": 80 },
+                "elite":        { "knee_stability": 92, "explosive_capacity": 92, "hip_mobility": 88, "balance": 86, "upper_body_posture": 86 }
+              }
+            }
+          }
+        },
+        "wicket_keeper": {
+          "title": "Wicketkeeper",
+          "description": "Stands behind stumps for 20 to 100+ overs in deep crouch stance; requires elite lateral balance, hip-ankle mobility, and reactive agility.",
+          "sub_roles": {
+            "wicketkeeper_batsman": {
+              "title": "Wicketkeeper-Batsman",
+              "description": "Dual specialist handling both glovework endurance and high-output batting.",
+              "primary_movement_patterns": ["squat_crouch_hold", "lateral_leg_side_slide", "standing_up_reflex", "batting_stroke_execution"],
+              "attribute_weights": {
+                "hip_mobility": 0.30,
+                "knee_stability": 0.25,
+                "balance": 0.20,
+                "explosive_capacity": 0.15,
+                "upper_body_posture": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "hip_mobility": 62, "knee_stability": 60, "balance": 60, "explosive_capacity": 54, "upper_body_posture": 56 },
+                "intermediate": { "hip_mobility": 76, "knee_stability": 74, "balance": 74, "explosive_capacity": 68, "upper_body_posture": 70 },
+                "advanced":     { "hip_mobility": 88, "knee_stability": 86, "balance": 86, "explosive_capacity": 82, "upper_body_posture": 82 },
+                "elite":        { "hip_mobility": 94, "knee_stability": 92, "balance": 92, "explosive_capacity": 88, "upper_body_posture": 88 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "football": {
+      "name": "Football (Soccer)",
+      "emoji": "⚽",
+      "disciplines": [
+        { "id": "association_football", "name": "11v11 Outdoor" },
+        { "id": "futsal", "name": "Futsal / Small-Sided" }
+      ],
+      "roles": {
+        "striker": {
+          "title": "Striker",
+          "description": "Central attacking player focused on short-burst acceleration, finishing under pressure, and aerial challenge.",
+          "sub_roles": {
+            "center_forward": {
+              "title": "Center Forward",
+              "description": "Combines physical hold-up play, aerial duels, and sharp box movement.",
+              "primary_movement_patterns": ["acceleration", "jumping", "change_of_direction", "shooting_mechanics"],
+              "attribute_weights": {
+                "explosive_capacity": 0.35,
+                "hip_mobility": 0.20,
+                "knee_stability": 0.15,
+                "balance": 0.15,
+                "movement_symmetry": 0.15
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 55, "hip_mobility": 55, "knee_stability": 55, "balance": 55, "movement_symmetry": 55 },
+                "intermediate": { "explosive_capacity": 72, "hip_mobility": 70, "knee_stability": 68, "balance": 66, "movement_symmetry": 68 },
+                "advanced":     { "explosive_capacity": 88, "hip_mobility": 85, "knee_stability": 80, "balance": 80, "movement_symmetry": 82 },
+                "elite":        { "explosive_capacity": 94, "hip_mobility": 90, "knee_stability": 86, "balance": 86, "movement_symmetry": 88 }
+              }
+            }
+          }
+        },
+        "winger": {
+          "title": "Winger / Wide Forward",
+          "description": "Wide attacking player relying on top-end sprint speed, multi-directional cutting, and crossing delivery.",
+          "sub_roles": {
+            "traditional_winger": {
+              "title": "Wide Flank Specialist",
+              "description": "Beats defenders on the outside and delivers crosses with speed.",
+              "primary_movement_patterns": ["sprinting", "dribbling", "crossing", "change_of_direction"],
+              "attribute_weights": {
+                "explosive_capacity": 0.35,
+                "movement_symmetry": 0.20,
+                "hip_mobility": 0.20,
+                "knee_stability": 0.15,
+                "balance": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 60, "movement_symmetry": 55, "hip_mobility": 58, "knee_stability": 55, "balance": 54 },
+                "intermediate": { "explosive_capacity": 76, "movement_symmetry": 70, "hip_mobility": 72, "knee_stability": 68, "balance": 67 },
+                "advanced":     { "explosive_capacity": 90, "movement_symmetry": 84, "hip_mobility": 87, "knee_stability": 80, "balance": 80 },
+                "elite":        { "explosive_capacity": 95, "movement_symmetry": 90, "hip_mobility": 92, "knee_stability": 86, "balance": 85 }
+              }
+            }
+          }
+        },
+        "central_midfielder": {
+          "title": "Central Midfielder",
+          "description": "Engine room player covering extensive distance with repeated decelerations, directional turns, and passing distribution.",
+          "sub_roles": {
+            "box_to_box": {
+              "title": "Box-to-Box Midfielder",
+              "description": "Connects defense and attack with continuous transition running and duel winning.",
+              "primary_movement_patterns": ["turning", "pressing", "passing", "positional_movement"],
+              "attribute_weights": {
+                "knee_stability": 0.25,
+                "hip_mobility": 0.20,
+                "balance": 0.20,
+                "upper_body_posture": 0.20,
+                "movement_symmetry": 0.15
+              },
+              "benchmarks": {
+                "beginner":     { "knee_stability": 58, "hip_mobility": 55, "balance": 58, "upper_body_posture": 58, "movement_symmetry": 60 },
+                "intermediate": { "knee_stability": 72, "hip_mobility": 68, "balance": 70, "upper_body_posture": 72, "movement_symmetry": 73 },
+                "advanced":     { "knee_stability": 84, "hip_mobility": 80, "balance": 83, "upper_body_posture": 85, "movement_symmetry": 85 },
+                "elite":        { "knee_stability": 90, "hip_mobility": 88, "balance": 88, "upper_body_posture": 90, "movement_symmetry": 90 }
+              }
+            }
+          }
+        },
+        "centre_back": {
+          "title": "Centre Back",
+          "description": "Defensive anchor winning aerial duels, executing physical tackles, and organising backline structure.",
+          "sub_roles": {
+            "central_defender": {
+              "title": "Central Defender",
+              "description": "Dominates aerial space and maintains balanced defensive jockeying.",
+              "primary_movement_patterns": ["jumping", "tackling", "heading", "defensive_positioning"],
+              "attribute_weights": {
+                "upper_body_posture": 0.25,
+                "knee_stability": 0.25,
+                "balance": 0.20,
+                "explosive_capacity": 0.20,
+                "movement_symmetry": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "upper_body_posture": 62, "knee_stability": 60, "balance": 60, "explosive_capacity": 54, "movement_symmetry": 58 },
+                "intermediate": { "upper_body_posture": 76, "knee_stability": 74, "balance": 74, "explosive_capacity": 67, "movement_symmetry": 70 },
+                "advanced":     { "upper_body_posture": 88, "knee_stability": 86, "balance": 85, "explosive_capacity": 80, "movement_symmetry": 82 },
+                "elite":        { "upper_body_posture": 92, "knee_stability": 92, "balance": 90, "explosive_capacity": 86, "movement_symmetry": 88 }
+              }
+            }
+          }
+        },
+        "goalkeeper": {
+          "title": "Goalkeeper",
+          "description": "Shot stopper requiring explosive lateral diving power, extreme joint reach, and set-position balance.",
+          "sub_roles": {
+            "shot_stopper": {
+              "title": "Shot Stopper",
+              "description": "Explosive reaction and lateral diving power in the box.",
+              "primary_movement_patterns": ["diving", "jumping", "footwork", "distribution"],
+              "attribute_weights": {
+                "explosive_capacity": 0.30,
+                "hip_mobility": 0.25,
+                "balance": 0.20,
+                "upper_body_posture": 0.15,
+                "knee_stability": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 58, "hip_mobility": 60, "balance": 62, "upper_body_posture": 60, "knee_stability": 55 },
+                "intermediate": { "explosive_capacity": 72, "hip_mobility": 74, "balance": 76, "upper_body_posture": 73, "knee_stability": 68 },
+                "advanced":     { "explosive_capacity": 85, "hip_mobility": 86, "balance": 88, "upper_body_posture": 85, "knee_stability": 80 },
+                "elite":        { "explosive_capacity": 92, "hip_mobility": 92, "balance": 94, "upper_body_posture": 90, "knee_stability": 86 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "basketball": {
+      "name": "Basketball",
+      "emoji": "🏀",
+      "disciplines": [
+        { "id": "standard_5v5", "name": "Full Court 5v5" },
+        { "id": "3x3", "name": "3x3 Half Court" }
+      ],
+      "roles": {
+        "point_guard": {
+          "title": "Point Guard",
+          "description": "Floor general directing offense with elite rapid change of direction and symmetrical lateral footwork.",
+          "sub_roles": {
+            "playmaker_pg": {
+              "title": "Playmaker Point Guard",
+              "description": "Orchestrates offense with rapid directional changes and vision.",
+              "primary_movement_patterns": ["change_of_direction", "acceleration", "defensive_slide", "ball_handling"],
+              "attribute_weights": {
+                "explosive_capacity": 0.30,
+                "movement_symmetry": 0.25,
+                "balance": 0.20,
+                "knee_stability": 0.15,
+                "hip_mobility": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 60, "movement_symmetry": 60, "balance": 60, "knee_stability": 58, "hip_mobility": 55 },
+                "intermediate": { "explosive_capacity": 75, "movement_symmetry": 74, "balance": 73, "knee_stability": 72, "hip_mobility": 68 },
+                "advanced":     { "explosive_capacity": 88, "movement_symmetry": 86, "balance": 85, "knee_stability": 85, "hip_mobility": 80 },
+                "elite":        { "explosive_capacity": 94, "movement_symmetry": 92, "balance": 90, "knee_stability": 90, "hip_mobility": 86 }
+              }
+            }
+          }
+        },
+        "shooting_guard": {
+          "title": "Shooting Guard",
+          "description": "Versatile perimeter scorer attacking off the catch and drive with balanced jump-shot posture.",
+          "sub_roles": {
+            "perimeter_scorer": {
+              "title": "Perimeter Scorer",
+              "description": "Off-ball cutting, pull-up jumpers, and transition scoring.",
+              "primary_movement_patterns": ["cutting", "off_ball_movement", "catch_and_shoot", "pull_up_jumper"],
+              "attribute_weights": {
+                "explosive_capacity": 0.25,
+                "balance": 0.25,
+                "upper_body_posture": 0.20,
+                "movement_symmetry": 0.20,
+                "knee_stability": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 58, "balance": 62, "upper_body_posture": 60, "movement_symmetry": 58, "knee_stability": 56 },
+                "intermediate": { "explosive_capacity": 72, "balance": 75, "upper_body_posture": 73, "movement_symmetry": 72, "knee_stability": 70 },
+                "advanced":     { "explosive_capacity": 84, "balance": 86, "upper_body_posture": 85, "movement_symmetry": 84, "knee_stability": 82 },
+                "elite":        { "explosive_capacity": 92, "balance": 92, "upper_body_posture": 90, "movement_symmetry": 90, "knee_stability": 88 }
+              }
+            }
+          }
+        },
+        "small_forward": {
+          "title": "Small Forward",
+          "description": "Versatile wing athlete handling multi-positional defense and attacking transition lanes.",
+          "sub_roles": {
+            "wing_slasher": {
+              "title": "Two-Way Wing",
+              "description": "Defends multiple positions and drives with power.",
+              "primary_movement_patterns": ["driving", "transition", "defensive_switching"],
+              "attribute_weights": {
+                "explosive_capacity": 0.30,
+                "hip_mobility": 0.20,
+                "movement_symmetry": 0.20,
+                "balance": 0.15,
+                "upper_body_posture": 0.15
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 60, "hip_mobility": 56, "movement_symmetry": 58, "balance": 58, "upper_body_posture": 56 },
+                "intermediate": { "explosive_capacity": 74, "hip_mobility": 70, "movement_symmetry": 72, "balance": 72, "upper_body_posture": 70 },
+                "advanced":     { "explosive_capacity": 86, "hip_mobility": 82, "movement_symmetry": 84, "balance": 83, "upper_body_posture": 82 },
+                "elite":        { "explosive_capacity": 92, "hip_mobility": 88, "movement_symmetry": 90, "balance": 88, "upper_body_posture": 88 }
+              }
+            }
+          }
+        },
+        "power_forward": {
+          "title": "Power Forward",
+          "description": "High-impact interior player battling for rebounds and screen-roll contact.",
+          "sub_roles": {
+            "post_rebounder": {
+              "title": "Post & Rebound Forward",
+              "description": "Absorbs contact, anchors screens, and jumps for offensive/defensive boards.",
+              "primary_movement_patterns": ["post_play", "rebounding", "screen_setting"],
+              "attribute_weights": {
+                "knee_stability": 0.30,
+                "explosive_capacity": 0.25,
+                "balance": 0.20,
+                "upper_body_posture": 0.15,
+                "hip_mobility": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "knee_stability": 62, "explosive_capacity": 56, "balance": 60, "upper_body_posture": 60, "hip_mobility": 54 },
+                "intermediate": { "knee_stability": 76, "explosive_capacity": 70, "balance": 73, "upper_body_posture": 73, "hip_mobility": 67 },
+                "advanced":     { "knee_stability": 88, "explosive_capacity": 82, "balance": 84, "upper_body_posture": 85, "hip_mobility": 79 },
+                "elite":        { "knee_stability": 92, "explosive_capacity": 88, "balance": 90, "upper_body_posture": 90, "hip_mobility": 85 }
+              }
+            }
+          }
+        },
+        "center": {
+          "title": "Center",
+          "description": "Rim protector and paint anchor maintaining verticality and contact resilience.",
+          "sub_roles": {
+            "rim_anchor": {
+              "title": "Rim Anchor",
+              "description": "Protects the basket with verticality, post defense, and glass control.",
+              "primary_movement_patterns": ["rim_protection", "post_defense", "pick_and_roll"],
+              "attribute_weights": {
+                "knee_stability": 0.35,
+                "upper_body_posture": 0.25,
+                "balance": 0.20,
+                "explosive_capacity": 0.15,
+                "hip_mobility": 0.05
+              },
+              "benchmarks": {
+                "beginner":     { "knee_stability": 65, "upper_body_posture": 62, "balance": 62, "explosive_capacity": 54, "hip_mobility": 52 },
+                "intermediate": { "knee_stability": 78, "upper_body_posture": 75, "balance": 75, "explosive_capacity": 67, "hip_mobility": 65 },
+                "advanced":     { "knee_stability": 90, "upper_body_posture": 87, "balance": 86, "explosive_capacity": 80, "hip_mobility": 77 },
+                "elite":        { "knee_stability": 94, "upper_body_posture": 92, "balance": 90, "explosive_capacity": 86, "hip_mobility": 82 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "athletics": {
+      "name": "Athletics / Track & Field",
+      "emoji": "🏃",
+      "disciplines": [
+        { "id": "track", "name": "Track Events" },
+        { "id": "field", "name": "Field Events" }
+      ],
+      "roles": {
+        "sprinter": {
+          "title": "Sprinter",
+          "description": "Short-distance maximal acceleration and top-speed specialist.",
+          "sub_roles": {
+            "short_sprint": {
+              "title": "100m / 200m Specialist",
+              "description": "Block start explosion, drive phase angle, and upright maximal velocity mechanics.",
+              "primary_movement_patterns": ["acceleration_mechanics", "top_speed_mechanics", "block_start"],
+              "attribute_weights": {
+                "explosive_capacity": 0.40,
+                "movement_symmetry": 0.25,
+                "hip_mobility": 0.20,
+                "knee_stability": 0.10,
+                "balance": 0.05
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 65, "movement_symmetry": 62, "hip_mobility": 60, "knee_stability": 58, "balance": 58 },
+                "intermediate": { "explosive_capacity": 80, "movement_symmetry": 76, "hip_mobility": 75, "knee_stability": 72, "balance": 72 },
+                "advanced":     { "explosive_capacity": 92, "movement_symmetry": 88, "hip_mobility": 87, "knee_stability": 84, "balance": 84 },
+                "elite":        { "explosive_capacity": 98, "movement_symmetry": 94, "hip_mobility": 92, "knee_stability": 90, "balance": 88 }
+              }
+            }
+          }
+        },
+        "middle_distance": {
+          "title": "Middle Distance Runner",
+          "description": "800m–1500m runner balancing stride economy, mechanical symmetry, and finishing speed.",
+          "sub_roles": {
+            "middle_track": {
+              "title": "800m - 1500m Runner",
+              "description": "Pace rhythm, sustained knee durability, and efficient hip stride extension.",
+              "primary_movement_patterns": ["race_pace_mechanics", "kick_finishing"],
+              "attribute_weights": {
+                "knee_stability": 0.30,
+                "movement_symmetry": 0.25,
+                "hip_mobility": 0.20,
+                "balance": 0.15,
+                "upper_body_posture": 0.10
+              },
+              "benchmarks": {
+                "beginner":     { "knee_stability": 62, "movement_symmetry": 64, "hip_mobility": 58, "balance": 60, "upper_body_posture": 60 },
+                "intermediate": { "knee_stability": 76, "movement_symmetry": 78, "hip_mobility": 72, "balance": 73, "upper_body_posture": 73 },
+                "advanced":     { "knee_stability": 87, "movement_symmetry": 88, "hip_mobility": 84, "balance": 85, "upper_body_posture": 85 },
+                "elite":        { "knee_stability": 94, "movement_symmetry": 94, "hip_mobility": 90, "balance": 90, "upper_body_posture": 90 }
+              }
+            }
+          }
+        },
+        "jumper": {
+          "title": "Jumper",
+          "description": "High / Long / Triple jump specialist converting approach velocity into vertical/horizontal takeoff impulse.",
+          "sub_roles": {
+            "long_high_jump": {
+              "title": "Takeoff & Flight Jumper",
+              "description": "High-impact single-leg plant and explosive aerial trajectory.",
+              "primary_movement_patterns": ["approach_run", "takeoff_mechanics", "landing"],
+              "attribute_weights": {
+                "explosive_capacity": 0.40,
+                "balance": 0.20,
+                "hip_mobility": 0.20,
+                "knee_stability": 0.15,
+                "upper_body_posture": 0.05
+              },
+              "benchmarks": {
+                "beginner":     { "explosive_capacity": 65, "balance": 62, "hip_mobility": 62, "knee_stability": 60, "upper_body_posture": 57 },
+                "intermediate": { "explosive_capacity": 80, "balance": 76, "hip_mobility": 76, "knee_stability": 73, "upper_body_posture": 70 },
+                "advanced":     { "explosive_capacity": 92, "balance": 87, "hip_mobility": 88, "knee_stability": 85, "upper_body_posture": 82 },
+                "elite":        { "explosive_capacity": 97, "balance": 92, "hip_mobility": 92, "knee_stability": 90, "upper_body_posture": 88 }
+              }
+            }
+          }
+        },
+        "thrower": {
+          "title": "Thrower",
+          "description": "Shot put, discus, or javelin athlete generating rotational power from ground up through trunk extension.",
+          "sub_roles": {
+            "rotational_throw": {
+              "title": "Rotational & Power Thrower",
+              "description": "Transfers rotational force through powerful trunk posture and hip drive.",
+              "primary_movement_patterns": ["rotational_power", "linear_drive", "release_mechanics"],
+              "attribute_weights": {
+                "upper_body_posture": 0.30,
+                "explosive_capacity": 0.25,
+                "hip_mobility": 0.25,
+                "balance": 0.15,
+                "movement_symmetry": 0.05
+              },
+              "benchmarks": {
+                "beginner":     { "upper_body_posture": 62, "explosive_capacity": 60, "hip_mobility": 62, "balance": 60, "movement_symmetry": 56 },
+                "intermediate": { "upper_body_posture": 76, "explosive_capacity": 74, "hip_mobility": 76, "balance": 74, "movement_symmetry": 70 },
+                "advanced":     { "upper_body_posture": 88, "explosive_capacity": 86, "hip_mobility": 88, "balance": 85, "movement_symmetry": 82 },
+                "elite":        { "upper_body_posture": 94, "explosive_capacity": 92, "hip_mobility": 92, "balance": 90, "movement_symmetry": 88 }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "development_objectives": {
+    "strength": {
+      "id": "strength",
+      "name": "Build Strength",
+      "category": "physical_capacity",
+      "description": "Develop foundational compound force production and structural integrity.",
+      "targeted_attributes": ["knee_stability", "upper_body_posture"],
+      "weight_boost": 0.15
+    },
+    "explosiveness": {
+      "id": "explosiveness",
+      "name": "Develop Explosiveness & Power",
+      "category": "physical_capacity",
+      "description": "Maximize rate of force development and peak velocity in short bursts.",
+      "targeted_attributes": ["explosive_capacity"],
+      "weight_boost": 0.20
+    },
+    "acceleration": {
+      "id": "acceleration",
+      "name": "Improve Acceleration & Speed",
+      "category": "physical_capacity",
+      "description": "Sharpen forward drive mechanics and first-step quickness.",
+      "targeted_attributes": ["explosive_capacity", "movement_symmetry"],
+      "weight_boost": 0.15
+    },
+    "mobility": {
+      "id": "mobility",
+      "name": "Enhance Mobility & Flexibility",
+      "category": "movement_quality",
+      "description": "Expand active functional range of motion in hips, spine, and ankles.",
+      "targeted_attributes": ["hip_mobility", "flexibility"],
+      "weight_boost": 0.15
+    },
+    "movement_efficiency": {
+      "id": "movement_efficiency",
+      "name": "Movement Efficiency & Balance",
+      "category": "movement_quality",
+      "description": "Reinforce center of mass control, dynamic balance, and smooth kinetic chain flow.",
+      "targeted_attributes": ["balance", "movement_symmetry"],
+      "weight_boost": 0.15
+    },
+    "technical_consistency": {
+      "id": "technical_consistency",
+      "name": "Technical & Postural Consistency",
+      "category": "movement_quality",
+      "description": "Maintain stable execution mechanics under repeated loading.",
+      "targeted_attributes": ["upper_body_posture", "balance"],
+      "weight_boost": 0.15
+    },
+    "injury_risk_reduction": {
+      "id": "injury_risk_reduction",
+      "name": "Injury-Risk Reduction",
+      "category": "resilience",
+      "description": "Strengthen joint stabilizers, address bilateral asymmetries, and reinforce landing control.",
+      "targeted_attributes": ["knee_stability", "movement_symmetry"],
+      "weight_boost": 0.20
+    },
+    "endurance": {
+      "id": "endurance",
+      "name": "Endurance & Work Capacity",
+      "category": "physical_capacity",
+      "description": "Build high volume tolerance while maintaining clean movement mechanics.",
+      "targeted_attributes": ["knee_stability", "upper_body_posture"],
+      "weight_boost": 0.10
+    }
+  }
+}

@@ -26,37 +26,53 @@ apiClient.interceptors.response.use(
 );
 
 export const authAPI = {
-  register: (data) => apiClient.post('/auth/register', data).then(res => res.data),
-  login: (data) => apiClient.post('/auth/login', data).then(res => res.data),
-  getMe: () => apiClient.get('/auth/me').then(res => res.data),
+  register: (data) => apiClient.post('/auth/register', data).then((res) => res.data),
+  login: (data) => apiClient.post('/auth/login', data).then((res) => res.data),
+  getMe: () => apiClient.get('/auth/me').then((res) => res.data),
 };
 
 export const intakeAPI = {
-  getSports: () => apiClient.get('/intake/sports').then(res => res.data),
-  submitProfile: (data) => apiClient.post('/intake/profile', data).then(res => res.data),
-  getProfile: () => apiClient.get('/intake/profile').then(res => res.data),
+  getSports: () => apiClient.get('/intake/sports').then((res) => res.data),
+  getObjectives: () => apiClient.get('/intake/objectives').then((res) => res.data),
+  submitProfile: (data) => apiClient.post('/intake/profile', data).then((res) => res.data),
+  getProfile: () => apiClient.get('/intake/profile').then((res) => res.data),
 };
 
 export const videoAPI = {
-  uploadVideo: (formData) => apiClient.post('/video/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => res.data),
-  getStatus: (id) => apiClient.get(`/video/${id}/status`).then(res => res.data),
+  coach: (formData) =>
+    apiClient
+      .post('/video/coach', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data),
+  uploadVideo: (formData) =>
+    apiClient
+      .post('/video/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((res) => res.data),
+  getStatus: (id) => apiClient.get(`/video/coach/${id}`).then((res) => res.data),
+  getProtocols: () => apiClient.get('/video/protocols').then((res) => res.data),
 };
 
 export const assessmentAPI = {
-  submitManual: (data) => apiClient.post('/assessment/manual', data).then(res => res.data),
-  getLatest: () => apiClient.get('/assessment/latest').then(res => res.data),
+  submitManual: (data) => apiClient.post('/assessment/manual', data).then((res) => res.data),
+  getLatest: () => apiClient.get('/assessment/latest').then((res) => res.data),
+  getProtocols: () => apiClient.get('/assessment/protocols').then((res) => res.data),
 };
 
 export const planAPI = {
-  getCurrent: () => apiClient.get('/plan/current').then(res => res.data),
-  generate: () => apiClient.post('/plan/generate').then(res => res.data),
-  getHistory: () => apiClient.get('/plan/history').then(res => res.data),
+  getCurrent: () => apiClient.get('/plan/current').then((res) => res.data),
+  generate: () => apiClient.post('/plan/generate').then((res) => res.data),
+  getRecovery: () => apiClient.get('/plan/recovery').then((res) => res.data),
+  getHistory: () => apiClient.get('/plan/history').then((res) => res.data),
 };
 
 export const progressAPI = {
-  logSession: (data) => apiClient.post('/progress/log', data).then(res => res.data),
-  getDashboard: () => apiClient.get('/progress/dashboard').then(res => res.data),
-  getLogs: () => apiClient.get('/progress/logs').then(res => res.data),
+  logSession: (data) => apiClient.post('/progress/log', data).then((res) => res.data),
+  getDashboard: () => apiClient.get('/progress/dashboard').then((res) => res.data),
+  getLogs: (limit = 20) => apiClient.get(`/progress/logs?limit=${limit}`).then((res) => res.data),
+  getReassessment: () => apiClient.get('/progress/reassessment').then((res) => res.data),
 };
 
 export default apiClient;

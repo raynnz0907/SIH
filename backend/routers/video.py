@@ -1,33 +1,100 @@
 from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Form
-import os, shutil, uuid
+from typing import Optional, Dict, Any, List
+import os
+import shutil
+import uuid
+
 from services.pose_analyzer import PoseAnalyzer
+from services.movement.registry import protocol_registry
 from config import settings
 
 router = APIRouter(prefix="/video", tags=["video"])
 
-# In-memory job store (perfect for demo)
-coaching_jobs: dict = {}
+# In-memory coaching & assessment job store
+coaching_jobs: Dict[str, Dict[str, Any]] = {}
 
 
-def _run_coaching_job(job_id: str, video_path: str, sport: str, role: str):
-    """Background: MediaPipe analysis + Ollama coaching advice."""
+def _run_coaching_job(
+    job_id: str,
+    video_path: str,
+    sport: str,
+    role: str,
+    sub_role: Optional[str] = None,
+    protocol_id: Optional[str] = None,
+):
+    """
+    Background worker:
+    1. Runs activity-aware VideoQualityGate + specific MovementProtocol.
+    2. If valid, generates evidence-grounded coaching advice.
+    3. If invalid/failed, records explicit failure status without fabricating fake metrics.
+    """
     try:
         analyzer = PoseAnalyzer()
-        analysis = analyzer.analyze_video(video_path)
-        movement_scores = analysis.get("movement_scores", {})
-        coaching = analyzer.generate_coaching_advice(sport, role, movement_scores)
-        coaching_jobs[job_id] = {
-            "status": "completed",
+        athlete_context = {
             "sport": sport,
             "role": role,
+            "primary_role": role,
+            "sub_role": sub_role,
+        }
+
+        # Activity-aware analysis
+        analysis_result = analyzer.analyze_video(
+            video_path,
+            activity_or_protocol=protocol_id,
+            athlete_context=athlete_context,
+        )
+
+        if not analysis_result.get("is_valid", False):
+            coaching_jobs[job_id] = {
+                "status": "failed",
+                "is_valid": False,
+                "sport": sport,
+                "role": role,
+                "error_code": analysis_result.get("error_code", "ASSESSMENT_FAILED"),
+                "message": analysis_result.get("message", "Movement assessment could not be validated."),
+                "movement_scores": {},
+                "movement_feedback": analysis_result.get("movement_feedback", []),
+                "quality_report": analysis_result.get("quality_report"),
+            }
+            return
+
+        movement_scores = analysis_result.get("movement_scores", {})
+        metric_details = analysis_result.get("metric_details", {})
+        protocol_name = analysis_result.get("protocol_name")
+
+        coaching = analyzer.generate_coaching_advice(
+            sport,
+            role,
+            movement_scores,
+            protocol_name=protocol_name,
+            metric_details=metric_details,
+        )
+
+        coaching_jobs[job_id] = {
+            "status": "completed",
+            "is_valid": True,
+            "sport": sport,
+            "role": role,
+            "sub_role": sub_role,
+            "protocol_id": analysis_result.get("protocol_id"),
+            "protocol_name": protocol_name,
+            "overall_movement_quality": analysis_result.get("overall_movement_quality"),
             "movement_scores": movement_scores,
+            "metric_details": metric_details,
+            "phase_breakdown": analysis_result.get("phase_breakdown"),
+            "movement_feedback": analysis_result.get("movement_feedback"),
+            "quality_report": analysis_result.get("quality_report"),
             "coaching": coaching,
         }
+
     except Exception as e:
-        analyzer = PoseAnalyzer()
         coaching_jobs[job_id] = {
-            "status": "completed",  # show fallback, not error
-            "coaching": analyzer.get_fallback_coaching(sport, role),
+            "status": "failed",
+            "is_valid": False,
+            "error_code": "PIPELINE_ERROR",
+            "message": f"An error occurred during video processing: {str(e)}",
+            "movement_scores": {},
+            "movement_feedback": ["Video processing encountered an unexpected system error."],
         }
     finally:
         try:
@@ -38,29 +105,64 @@ def _run_coaching_job(job_id: str, video_path: str, sport: str, role: str):
 
 
 @router.post("/coach")
+@router.post("/upload")
 async def coach_video(
     background_tasks: BackgroundTasks,
     video: UploadFile = File(...),
-    sport: str = Form(default="football"),
-    role: str = Form(default="striker"),
+    sport: str = Form(default="cricket"),
+    role: str = Form(default="batsman"),
+    sub_role: Optional[str] = Form(default=None),
+    protocol: Optional[str] = Form(default=None),
+    activity: Optional[str] = Form(default=None),
 ):
-    """Upload a video and get AI sport-specific coaching. No auth required."""
+    """
+    Upload an activity video for biomechanical analysis and evidence-grounded coaching.
+    Accepts activity / protocol parameter to enforce appropriate analysis model.
+    """
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     job_id = str(uuid.uuid4())[:8]
+
     ext = (video.filename or "video.mp4").rsplit(".", 1)[-1].lower()
     if ext not in ["mp4", "mov", "avi", "mkv", "webm"]:
-        raise HTTPException(400, "Unsupported format. Use mp4, mov, avi, mkv or webm.")
+        raise HTTPException(
+            400, "Unsupported format. Use mp4, mov, avi, mkv or webm."
+        )
+
+    selected_protocol = protocol or activity
+
     video_path = os.path.join(settings.UPLOAD_DIR, f"{job_id}.{ext}")
     with open(video_path, "wb") as f:
         shutil.copyfileobj(video.file, f)
-    coaching_jobs[job_id] = {"status": "processing"}
-    background_tasks.add_task(_run_coaching_job, job_id, video_path, sport.lower(), role.lower().replace(" ", "_"))
-    return {"job_id": job_id, "status": "processing"}
+
+    coaching_jobs[job_id] = {"status": "processing", "job_id": job_id}
+
+    background_tasks.add_task(
+        _run_coaching_job,
+        job_id,
+        video_path,
+        sport.lower(),
+        role.lower().replace(" ", "_"),
+        sub_role.lower().replace(" ", "_") if sub_role else None,
+        selected_protocol,
+    )
+
+    return {
+        "job_id": job_id,
+        "status": "processing",
+        "protocol": selected_protocol,
+    }
 
 
 @router.get("/coach/{job_id}")
-async def get_coaching(job_id: str):
-    """Poll every 3s to check analysis status."""
+@router.get("/{job_id}/status")
+async def get_coaching_status(job_id: str):
+    """Poll to retrieve the status and results of a video analysis job."""
     if job_id not in coaching_jobs:
         raise HTTPException(404, "Job not found")
     return coaching_jobs[job_id]
+
+
+@router.get("/protocols")
+async def get_supported_protocols() -> List[Dict[str, Any]]:
+    """List all registered and validated movement assessment protocols."""
+    return protocol_registry.list_supported_protocols()

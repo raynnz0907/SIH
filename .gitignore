@@ -29,15 +29,38 @@ ENV/
 
 # ── SENSITIVE — never commit these ───────────────────
 .env
+.env.*
 backend/.env
 *.env
+!.env.example
+!backend/.env.example
 secrets.json
 credentials.json
 *_key.json
 service_account*.json
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.crt
+id_rsa*
+
+# ── ML Model Weights & Large Binaries ────────────────
+*.task
+*.onnx
+*.pt
+*.pth
+*.bin
+*.weights
+*.h5
+*.tflite
+backend/models/*.task
 
 # ── Database files ────────────────────────────────────
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 backend/athletiq.db
