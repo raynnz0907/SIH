@@ -15,15 +15,10 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response Interceptor: Handle 401
+// Response Interceptor: Pass-through (no auth redirects)
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      useAthleteStore.getState().logout();
-    }
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 /**

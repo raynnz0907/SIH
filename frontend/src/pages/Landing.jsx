@@ -74,10 +74,10 @@ export default function Landing() {
             <SportifyLogo size="xs" showTagline={false} />
           </Link>
           <Link
-            to="/onboarding?mode=signin"
+            to="/"
             className="text-xs font-bold font-tech uppercase tracking-wider text-slate-300 hover:text-white px-4 py-2 rounded-xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] transition-all active:scale-95"
           >
-            Sign In
+            Enter Studio
           </Link>
         </header>
 
@@ -153,22 +153,24 @@ export default function Landing() {
 
         {/* ── 3. BOTTOM ACTION DOCK ─────────────────────────────────────────── */}
         <footer className="w-full max-w-md mx-auto space-y-3 pt-2 pb-safe">
-          <button
-            onClick={() => navigate('/onboarding?mode=signup')}
-            className="w-full h-12 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2 active-press shadow-[0_4px_24px_rgba(255,255,255,0.2)]"
-          >
-            <span>Build Athlete Profile</span>
-            <ArrowRightIcon className="w-4 h-4" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => navigate('/')}
+              className="flex-1 h-12 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2 active-press shadow-[0_4px_24px_rgba(255,255,255,0.2)]"
+            >
+              <span>Launch Dashboard</span>
+              <ArrowRightIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => navigate('/onboarding')}
+              className="flex-1 h-12 btn-secondary text-xs uppercase tracking-wider flex items-center justify-center gap-2 active-press"
+            >
+              <span>Configure Sport</span>
+            </button>
+          </div>
 
           <p className="text-center text-[11px] text-slate-400 font-sans">
-            Already registered?{' '}
-            <Link
-              to="/onboarding?mode=signin"
-              className="text-white hover:underline font-tech font-bold ml-1"
-            >
-              Sign In to Studio
-            </Link>
+            Ready to train immediately with zero authentication barriers.
           </p>
         </footer>
       </div>

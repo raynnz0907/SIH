@@ -1,6 +1,5 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAthleteStore } from './store/athleteStore';
 
 // Error Boundary & Hydration Gate
 import AppErrorBoundary from './components/common/AppErrorBoundary';
@@ -21,17 +20,6 @@ import Progress from './pages/Progress';
 import MobileTopBar from './components/layout/MobileTopBar';
 import MobileBottomNav from './components/layout/MobileBottomNav';
 
-const ProtectedRoute = ({ children }) => {
-  const token = useAthleteStore((state) => state.token);
-  const isAuthenticated = useAthleteStore((state) => state.isAuthenticated);
-
-  if (!token && !isAuthenticated) {
-    return <Navigate to="/onboarding?mode=signin" replace />;
-  }
-
-  return children;
-};
-
 const AppLayout = ({ children }) => {
   return (
     <div className="min-h-[100dvh] bg-[#07080C] text-[#F1F5F9] flex flex-col w-full selection:bg-white/20 relative">
@@ -49,77 +37,84 @@ function App() {
     <AppErrorBoundary>
       <ProfileHydrationGate>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/onboarding" element={<Onboarding />} />
+          {/* Direct home page: Dashboard loads immediately without any login/signup barrier */}
           <Route
-            path="/assessment/:sport"
+            path="/"
             element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <SportAssessmentPage />
-                </AppLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/video"
-            element={
-              <ProtectedRoute>
-                <VideoCapture />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analysis/:id"
-            element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Analysis />
-                </AppLayout>
-              </ProtectedRoute>
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
             }
           />
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Dashboard />
-                </AppLayout>
-              </ProtectedRoute>
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
             }
           />
+
+          {/* Product Overview / Landing Page */}
+          <Route path="/landing" element={<Landing />} />
+
+          {/* Sport / Role Calibration */}
+          <Route path="/onboarding" element={<Onboarding />} />
+
+          {/* Movement Assessment Studio */}
+          <Route
+            path="/assessment/:sport"
+            element={
+              <AppLayout>
+                <SportAssessmentPage />
+              </AppLayout>
+            }
+          />
+
+          {/* Backward-compatible video route */}
+          <Route path="/video" element={<VideoCapture />} />
+
+          {/* Biomechanical Telemetry Report */}
+          <Route
+            path="/analysis/:id"
+            element={
+              <AppLayout>
+                <Analysis />
+              </AppLayout>
+            }
+          />
+
+          {/* 4-Week Training Pathway */}
           <Route
             path="/plan"
             element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <TrainingPlan />
-                </AppLayout>
-              </ProtectedRoute>
+              <AppLayout>
+                <TrainingPlan />
+              </AppLayout>
             }
           />
+
+          {/* Strain Diagnostics & Recovery */}
           <Route
             path="/recovery"
             element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <RecoveryPlan />
-                </AppLayout>
-              </ProtectedRoute>
+              <AppLayout>
+                <RecoveryPlan />
+              </AppLayout>
             }
           />
+
+          {/* Longitudinal Progress & Reassessment */}
           <Route
             path="/progress"
             element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Progress />
-                </AppLayout>
-              </ProtectedRoute>
+              <AppLayout>
+                <Progress />
+              </AppLayout>
             }
           />
-          {/* Catch-all route to prevent blank screens */}
+
+          {/* Catch-all route returns cleanly to Home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ProfileHydrationGate>

@@ -2,18 +2,37 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authAPI, intakeAPI, formatErrorMessage } from '../api/client';
 
+export const DEFAULT_ATHLETE = {
+  id: 'athlete-1',
+  email: 'athlete@sportify.ai',
+  full_name: 'Alex Vance',
+};
+
+export const DEFAULT_PROFILE = {
+  sport: 'cricket',
+  primary_role: 'batsman',
+  sub_role: 'opening_batsman',
+  experience_level: 'intermediate',
+  training_days_per_week: 4,
+  session_duration_minutes: 60,
+  age: 21,
+  weight_kg: 72,
+  height_cm: 178,
+  development_objectives: ['explosiveness', 'deceleration'],
+};
+
 export const useAthleteStore = create(
   persist(
     (set, get) => ({
-      // Auth & Identity
-      athlete: null,
-      token: null,
-      isAuthenticated: false,
-      authStatus: 'unknown', // 'unknown' | 'authenticated' | 'unauthenticated'
+      // Auth & Identity (Ready by default — zero login/auth barrier)
+      athlete: DEFAULT_ATHLETE,
+      token: 'local-session-active',
+      isAuthenticated: true,
+      authStatus: 'authenticated',
 
       // Profile & Status
-      profile: null,
-      profileStatus: 'idle', // 'idle' | 'loading' | 'ready' | 'missing' | 'error'
+      profile: DEFAULT_PROFILE,
+      profileStatus: 'ready',
       profileError: null,
 
       // Biomechanical Telemetry & Assessment
@@ -31,24 +50,25 @@ export const useAthleteStore = create(
 
       login: (athlete, token, profile = null) => {
         set({
-          athlete,
-          token,
+          athlete: athlete || DEFAULT_ATHLETE,
+          token: token || 'local-session-active',
           isAuthenticated: true,
           authStatus: 'authenticated',
-          profile,
-          profileStatus: profile ? 'ready' : 'missing',
+          profile: profile || get().profile || DEFAULT_PROFILE,
+          profileStatus: 'ready',
           profileError: null,
         });
       },
 
       logout: () => {
+        // Reset to clean default state without locking out the user
         set({
-          athlete: null,
-          token: null,
-          isAuthenticated: false,
-          authStatus: 'unauthenticated',
-          profile: null,
-          profileStatus: 'idle',
+          athlete: DEFAULT_ATHLETE,
+          token: 'local-session-active',
+          isAuthenticated: true,
+          authStatus: 'authenticated',
+          profile: DEFAULT_PROFILE,
+          profileStatus: 'ready',
           profileError: null,
           currentAssessment: null,
           bottlenecks: [],
@@ -58,8 +78,8 @@ export const useAthleteStore = create(
 
       setProfile: (profile) => {
         set({
-          profile,
-          profileStatus: profile ? 'ready' : 'missing',
+          profile: profile ? { ...DEFAULT_PROFILE, ...profile } : DEFAULT_PROFILE,
+          profileStatus: 'ready',
           profileError: null,
         });
       },
@@ -79,60 +99,23 @@ export const useAthleteStore = create(
         set((state) => ({ onboardingData: { ...state.onboardingData, ...data } })),
 
       /**
-       * Bootstraps authentication identity and profile on app load.
-       * If profile is 404/missing, flags profileStatus = 'missing' to allow onboarding.
+       * Bootstraps athlete context on app load.
+       * Always ensures a valid profile is ready with zero auth barriers.
        */
       hydrateAuthAndProfile: async () => {
         const state = get();
-        const token = state.token;
-
-        if (!token) {
+        if (!state.profile) {
           set({
-            authStatus: 'unauthenticated',
-            isAuthenticated: false,
-            athlete: null,
-            profile: null,
-            profileStatus: 'idle',
+            athlete: DEFAULT_ATHLETE,
+            token: 'local-session-active',
+            isAuthenticated: true,
+            authStatus: 'authenticated',
+            profile: DEFAULT_PROFILE,
+            profileStatus: 'ready',
+            profileError: null,
           });
-          return { isAuthenticated: false, profileStatus: 'idle' };
         }
-
-        set({ profileStatus: 'loading' });
-
-        try {
-          // 1. Fetch current athlete identity
-          const me = await authAPI.getMe();
-          set({ athlete: me, isAuthenticated: true, authStatus: 'authenticated' });
-
-          // 2. Fetch athlete profile
-          try {
-            const prof = await intakeAPI.getProfile();
-            set({ profile: prof, profileStatus: 'ready', profileError: null });
-            return { isAuthenticated: true, profileStatus: 'ready', profile: prof };
-          } catch (profileErr) {
-            if (profileErr.response?.status === 404) {
-              set({ profile: null, profileStatus: 'missing', profileError: null });
-              return { isAuthenticated: true, profileStatus: 'missing', profile: null };
-            }
-            const safeError = formatErrorMessage(profileErr, 'Failed to calibrate profile.');
-            set({
-              profileStatus: 'error',
-              profileError: safeError,
-            });
-            return { isAuthenticated: true, profileStatus: 'error', error: safeError };
-          }
-        } catch (authErr) {
-          if (authErr.response?.status === 401) {
-            get().logout();
-            return { isAuthenticated: false, profileStatus: 'idle' };
-          }
-          const safeError = formatErrorMessage(authErr, 'Authentication session expired.');
-          set({
-            profileStatus: 'error',
-            profileError: safeError,
-          });
-          return { isAuthenticated: false, profileStatus: 'error', error: safeError };
-        }
+        return { isAuthenticated: true, profileStatus: 'ready', profile: state.profile || DEFAULT_PROFILE };
       },
     }),
     {

@@ -3,23 +3,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAthleteStore } from '../../store/athleteStore';
 import { normalizeSport } from '../../config/sportAssessmentConfig';
 import SportifyLogo from '../common/SportifyLogo';
-import { SportIcon, LogoutIcon, ZapIcon } from '../common/Icons';
+import { SportIcon, ZapIcon } from '../common/Icons';
 
 export default function MobileTopBar() {
   const location = useLocation();
-  const navigate = useNavigate();
 
-  const athlete = useAthleteStore((state) => state.athlete);
   const profile = useAthleteStore((state) => state.profile);
-  const logout = useAthleteStore((state) => state.logout);
 
   const normalizedSport = profile?.sport ? normalizeSport(profile.sport) : 'cricket';
   const assessmentPath = `/assessment/${normalizedSport || 'cricket'}`;
-
-  const handleSignOut = () => {
-    logout();
-    navigate('/onboarding?mode=signin');
-  };
 
   const roleTitle = profile?.sub_role
     ? profile.sub_role.replace(/_/g, ' ')
@@ -68,25 +60,16 @@ export default function MobileTopBar() {
           ))}
         </nav>
 
-        {/* Right: Fast Assessment Action & Sign Out */}
+        {/* Right: Fast Assessment Action */}
         <div className="flex items-center gap-2 shrink-0">
           <Link
             to={assessmentPath}
-            className="px-2.5 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/15 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-tech font-bold uppercase tracking-wider shadow-sm"
+            className="px-3 py-1.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/15 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-tech font-bold uppercase tracking-wider shadow-sm"
             title="New Assessment"
           >
             <ZapIcon className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Record</span>
+            <span>Record</span>
           </Link>
-
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all active:scale-95 flex items-center justify-center"
-            title="Sign Out"
-          >
-            <LogoutIcon className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
     </header>
