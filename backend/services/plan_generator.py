@@ -110,11 +110,11 @@ class PlanGenerator:
         age = athlete_profile.get("age", "unknown")
 
         bottleneck_text = "\n".join([
-            f"  {i+1}. {b['attribute'].replace('_', ' ').title()} — "
-            f"Score: {b['score']:.0f}/100, Benchmark: {b['benchmark']}/100, "
-            f"Gap: {b['gap']:.0f} pts. {b.get('role_relevance_explanation', '')}"
+            f"  {i+1}. {b.get('attribute', 'metric').replace('_', ' ').title()} — "
+            f"Score: {float(b.get('score', 70)):.0f}/100, Benchmark: {float(b.get('benchmark', 80)):.0f}/100, "
+            f"Gap: {float(b.get('gap', 10)):.0f} pts. {b.get('role_relevance_explanation', '')}"
             for i, b in enumerate(bottlenecks[:5])
-        ])
+        ]) or "  - No severe kinematic bottlenecks detected. Focus on foundational power and movement symmetry."
         goals_text = ", ".join(goals) if goals else "general athletic improvement"
 
         return f"""Generate a 4-week training plan as JSON for this athlete:
