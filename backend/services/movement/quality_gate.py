@@ -53,8 +53,14 @@ class VideoQualityGate:
                 0.0,
             )
 
-        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        raw_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        # Downsample high-FPS video (e.g. 60fps) to ~25-30fps for 2x faster processing without accuracy loss
+        skip_step = max(1, round(raw_fps / 28.0)) if raw_fps > 35.0 else 1
+        effective_fps = raw_fps / skip_step
+        fps = effective_fps
+
         total_frames = 0
+        detected_frames = 0
         usable_frames = 0
         raw_landmark_sequence = []
         missing_landmarks_set = set()
@@ -65,15 +71,35 @@ class VideoQualityGate:
             else [11, 12, 23, 24, 25, 26, 27, 28]
         )
         min_visibility = (
-            protocol.min_visibility_threshold if protocol else 0.50
+            protocol.min_visibility_threshold if protocol else 0.35
         )
-        min_usable_frames = protocol.min_usable_frames if protocol else 15
+        min_usable_frames = protocol.min_usable_frames if protocol else 12
+        min_coverage_ratio = (
+            getattr(protocol, "min_landmark_coverage_ratio", 0.70) if protocol else 0.70
+        )
 
-        while cap.isOpened():
+        frame_counter = 0
+        MAX_ANALYSIS_FRAMES = 180  # Cap at ~6-7 seconds of movement to avoid CPU thrashing on 1-minute videos
+
+        while cap.isOpened() and len(raw_landmark_sequence) < MAX_ANALYSIS_FRAMES:
             ret, frame = cap.read()
             if not ret:
                 break
             total_frames += 1
+            frame_counter += 1
+
+            if skip_step > 1 and (frame_counter % skip_step != 0):
+                continue
+
+            # Scale down large frames (e.g. 1080p, 4K phone recordings) to 720px max dimension
+            # MediaPipe operates internally on 256x256; downscaling saves massive CPU memory & OpenCV cycle time
+            h, w = frame.shape[:2]
+            max_dim = max(h, w)
+            if max_dim > 720:
+                scale = 720.0 / max_dim
+                frame = cv2.resize(
+                    frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA
+                )
 
             image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image_rgb.flags.writeable = False
@@ -82,25 +108,40 @@ class VideoQualityGate:
             if not results or not results.pose_landmarks:
                 continue
 
+            detected_frames += 1
             landmarks = results.pose_landmarks.landmark
             frame_dict = {}
-            frame_is_usable = True
+            passed_landmarks = 0
 
             for idx in required_indices:
                 if idx < len(landmarks):
                     lm = landmarks[idx]
                     visibility = getattr(lm, "visibility", 1.0)
-                    if visibility < min_visibility:
-                        frame_is_usable = False
+                    if visibility >= min_visibility:
+                        passed_landmarks += 1
+                    else:
                         missing_landmarks_set.add(
                             cls.LANDMARK_NAMES.get(idx, f"joint_{idx}")
                         )
                     frame_dict[idx] = [lm.x, lm.y, lm.z, visibility]
                 else:
-                    frame_is_usable = False
                     missing_landmarks_set.add(
                         cls.LANDMARK_NAMES.get(idx, f"joint_{idx}")
                     )
+
+            # Frame is usable if at least 70% of required landmarks are adequately visible
+            coverage = passed_landmarks / len(required_indices) if required_indices else 0.0
+
+            # Core anchor safeguard: if required_indices contains torso landmarks, at least one must be visible
+            torso_indices = [i for i in (11, 12, 23, 24) if i in required_indices]
+            has_anchor = True
+            if torso_indices:
+                has_anchor = any(
+                    frame_dict.get(i, [0, 0, 0, 0])[3] >= min_visibility
+                    for i in torso_indices
+                )
+
+            frame_is_usable = (coverage >= min_coverage_ratio) and has_anchor
 
             # Store all landmark points if frame had landmarks
             if frame_dict:
@@ -122,6 +163,22 @@ class VideoQualityGate:
 
         cap.release()
 
+        # Interpolate 1-2 frame brief landmark dropouts for smooth downstream kinematics
+        if raw_landmark_sequence and len(raw_landmark_sequence) >= 3:
+            for idx in required_indices:
+                for i in range(1, len(raw_landmark_sequence) - 1):
+                    curr = raw_landmark_sequence[i].get(idx)
+                    curr_vis = curr[3] if curr else 0.0
+                    if curr_vis < min_visibility:
+                        prev = raw_landmark_sequence[i - 1].get(idx)
+                        nxt = raw_landmark_sequence[i + 1].get(idx)
+                        if prev and nxt and prev[3] >= min_visibility and nxt[3] >= min_visibility:
+                            interp_x = (prev[0] + nxt[0]) / 2.0
+                            interp_y = (prev[1] + nxt[1]) / 2.0
+                            interp_z = (prev[2] + nxt[2]) / 2.0
+                            interp_vis = (prev[3] + nxt[3]) / 2.0
+                            raw_landmark_sequence[i][idx] = [interp_x, interp_y, interp_z, interp_vis]
+
         if total_frames == 0:
             return (
                 QualityReport(
@@ -136,7 +193,24 @@ class VideoQualityGate:
                 fps,
             )
 
-        visibility_rate = usable_frames / total_frames if total_frames > 0 else 0.0
+        if detected_frames == 0:
+            return (
+                QualityReport(
+                    is_valid=False,
+                    total_frames=total_frames,
+                    usable_frames=0,
+                    visibility_rate=0.0,
+                    error_code="NO_POSE_DETECTED",
+                    message="No human athlete detected in video. Ensure full body is in frame and lighting is adequate.",
+                ),
+                [],
+                fps,
+            )
+
+        # Active movement window: calculate visibility rate over detected athlete frames
+        # Prevents dead-time/setup padding from penalizing clean videos
+        active_window = max(detected_frames, int(total_frames * 0.35), 1)
+        visibility_rate = usable_frames / active_window
 
         # Quality assertions
         if usable_frames < min_usable_frames:
@@ -157,7 +231,7 @@ class VideoQualityGate:
                 fps,
             )
 
-        if visibility_rate < 0.40:
+        if visibility_rate < 0.25:
             return (
                 QualityReport(
                     is_valid=False,
@@ -166,7 +240,7 @@ class VideoQualityGate:
                     visibility_rate=round(visibility_rate, 3),
                     error_code="LOW_VISIBILITY_RATE",
                     message=(
-                        f"Athlete was occluded or out of frame in {round((1 - visibility_rate)*100)}% of frames. "
+                        f"Athlete was occluded or out of frame in {round((1 - visibility_rate)*100)}% of movement frames. "
                         f"Missing critical joints: {', '.join(list(missing_landmarks_set)[:3])}."
                     ),
                     missing_landmarks=list(missing_landmarks_set),

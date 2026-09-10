@@ -47,8 +47,9 @@ class MovementProtocol(ABC):
     protocol_id: str
     name: str
     required_landmarks: List[int]
-    min_usable_frames: int = 15
-    min_visibility_threshold: float = 0.55
+    min_usable_frames: int = 12
+    min_visibility_threshold: float = 0.35
+    min_landmark_coverage_ratio: float = 0.70
 
     @abstractmethod
     def analyze(
