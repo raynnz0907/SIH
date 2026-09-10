@@ -125,42 +125,6 @@ export default function TrainingPlan() {
     return firstSentence.endsWith('.') ? firstSentence : `${firstSentence}.`;
   };
 
-  const handleSubmitLog = async (e) => {
-    e?.preventDefault();
-    try {
-      await progressAPI.logSession({
-        session_date: new Date().toISOString().split('T')[0],
-        session_type: logForm.session_type,
-        duration_minutes: Number(logForm.duration_minutes),
-        perceived_exertion: Number(logForm.perceived_exertion),
-        notes: logForm.notes,
-        completed: true,
-      });
-      setLoggingSuccess(true);
-      setTimeout(() => {
-        setIsLogModalOpen(false);
-        setLoggingSuccess(false);
-      }, 1500);
-    } catch (err) {
-      console.error('Failed to log session:', err);
-    }
-  };
-
-  if (loading || generating) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 select-none">
-        <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin" />
-        <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
-          {generating ? 'Synthesizing 4-Week Pathway from Exercise Library...' : 'Loading Training Pathway...'}
-        </p>
-      </div>
-    );
-  }
-
-  const weeks = planData?.weeks || [];
-  const currentWeekData = weeks.find((w) => w.week_number === selectedWeek) || weeks[0];
-  const sessions = currentWeekData?.sessions || [];
-
   return (
     <div className="space-y-4 select-none pb-8">
       {/* ── 1. TOP HERO: WORKOUT CONTEXT & DISCREET REGENERATE ────────────────── */}
