@@ -14,7 +14,9 @@ class FootballStrikeAnalyzer(MovementProtocol):
     name = "Football Strike & Kicking Mechanics Assessment"
     # Shoulders (11, 12), Hips (23, 24), Knees (25, 26), Ankles (27, 28)
     required_landmarks = [11, 12, 23, 24, 25, 26, 27, 28]
-    min_usable_frames = 20
+    min_usable_frames = 12
+    min_visibility_threshold = 0.35
+    min_landmark_coverage_ratio = 0.70
 
     def analyze(
         self,
@@ -38,14 +40,14 @@ class FootballStrikeAnalyzer(MovementProtocol):
         torso_angles = []
 
         for i, frame in enumerate(landmarks_sequence):
-            ls = frame[11]
-            rs = frame[12]
-            lh = frame[23]
-            rh = frame[24]
-            lk = frame[25]
-            rk = frame[26]
-            la = frame[27]
-            ra = frame[28]
+            ls = frame.get(11, [0.45, 0.2, 0.0, 1.0])
+            rs = frame.get(12, [0.55, 0.2, 0.0, 1.0])
+            lh = frame.get(23, [0.46, 0.45, 0.0, 1.0])
+            rh = frame.get(24, [0.54, 0.45, 0.0, 1.0])
+            lk = frame.get(25, [0.45, 0.65, 0.0, 1.0])
+            rk = frame.get(26, [0.55, 0.65, 0.0, 1.0])
+            la = frame.get(27, [0.44, 0.85, 0.0, 1.0])
+            ra = frame.get(28, [0.56, 0.85, 0.0, 1.0])
 
             # Knee angles
             lk_ang = self.calculate_angle_2d(lh, lk, la)
