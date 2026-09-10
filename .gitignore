@@ -131,3 +131,5 @@ htmlcov/
 .cache/
 tmp/
 temp/
+.agents/
+.gemini/

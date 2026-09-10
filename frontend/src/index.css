@@ -73,60 +73,62 @@
 }
 
 @layer components {
-  /* Brushed Titanium Glass Card */
-  .sportify-card {
-    background: linear-gradient(145deg, rgba(18, 20, 28, 0.85) 0%, rgba(10, 11, 16, 0.95) 100%);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+  /* Surface Elevation Hierarchy */
+  .sportify-surface {
+    background: #0D0F16;
     border-radius: 16px;
-    box-shadow:
-      0 8px 24px -6px rgba(0, 0, 0, 0.8),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sportify-card {
+    background: #0F121C;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.7);
+    transition: border-color 0.18s ease;
   }
 
   .sportify-card:hover {
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.13);
+  }
+
+  .sportify-card-subtle {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
   }
 
   .sportify-card-glow {
-    background: linear-gradient(145deg, rgba(24, 28, 38, 0.9) 0%, rgba(14, 16, 22, 0.95) 100%);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #141724;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 16px;
-    box-shadow:
-      0 12px 32px -8px rgba(0, 0, 0, 0.85),
-      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.8);
   }
 
-  /* High-Performance Liquid Platinum CTA Button */
+  /* Restrained, Athletic Button Hierarchy */
   .btn-primary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 44px;
-    background: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 45%, #CBD5E1 75%, #94A3B8 100%);
+    background: #F8FAFC;
     color: #07080C;
-    font-weight: 800;
+    font-weight: 700;
     font-family: 'IBM Plex Sans', sans-serif;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.01em;
     padding: 0.625rem 1.25rem;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow:
-      0 4px 16px -2px rgba(255, 255, 255, 0.16),
-      inset 0 1px 0 #FFFFFF;
-    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+    transition: all 0.15s ease;
   }
 
   .btn-primary:hover {
-    filter: brightness(1.04);
+    background: #FFFFFF;
+    box-shadow: 0 4px 14px rgba(255, 255, 255, 0.2);
   }
 
   .btn-primary:active {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 
   .btn-secondary {
@@ -134,26 +136,50 @@
     align-items: center;
     justify-content: center;
     min-height: 44px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.09);
     color: #F1F5F9;
     font-weight: 600;
     font-family: 'IBM Plex Sans', sans-serif;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
     padding: 0.625rem 1.25rem;
     border-radius: 12px;
-    backdrop-filter: blur(12px);
-    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.15s ease;
   }
 
   .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.18);
     color: #FFFFFF;
   }
 
   .btn-secondary:active {
-    transform: scale(0.97);
+    transform: scale(0.98);
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    background: transparent;
+    color: #94A3B8;
+    font-weight: 500;
+    font-family: 'IBM Plex Sans', sans-serif;
+    padding: 0.5rem 0.875rem;
+    border-radius: 10px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-ghost:hover {
+    color: #F1F5F9;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .btn-ghost:active {
+    transform: scale(0.98);
   }
 
   /* Telemetry Status Badges */
@@ -183,8 +209,10 @@
 
   /* Form Inputs */
   .sportify-input {
-    background: rgba(10, 12, 17, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: #F8FAFC;
     border-radius: 10px;
     padding: 0.75rem 1rem;
@@ -194,7 +222,8 @@
   }
 
   .sportify-input:focus {
-    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
   }
 

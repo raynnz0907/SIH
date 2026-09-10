@@ -17,10 +17,12 @@ import {
   Eye,
   Flame,
   HeartPulse,
+  Home,
   Layers,
   LogOut,
   Play,
   RotateCcw,
+  ScanLine,
   Shield,
   ShieldAlert,
   Sparkles,
@@ -49,6 +51,23 @@ export const RecoveryIcon = ({ className = 'w-5 h-5' }) => <HeartPulse className
 export const ProgressIcon = ({ className = 'w-5 h-5' }) => <TrendingUp className={className} />;
 export const ProfileIcon = ({ className = 'w-5 h-5' }) => <User className={className} />;
 export const LogoutIcon = ({ className = 'w-5 h-5' }) => <LogOut className={className} />;
+
+// ── BOTTOM NAVIGATION ICONS (Unified 2.25 stroke, identical 20x20 bounding, zero distortion) ──
+export const NavHomeIcon = ({ className = 'w-5 h-5', strokeWidth = 2.25 }) => (
+  <Home className={className} strokeWidth={strokeWidth} />
+);
+export const NavTrainingIcon = ({ className = 'w-5 h-5', strokeWidth = 2.25 }) => (
+  <Dumbbell className={className} strokeWidth={strokeWidth} />
+);
+export const NavAssessIcon = ({ className = 'w-5 h-5', strokeWidth = 2.25 }) => (
+  <ScanLine className={className} strokeWidth={strokeWidth} />
+);
+export const NavRecoveryIcon = ({ className = 'w-5 h-5', strokeWidth = 2.25 }) => (
+  <HeartPulse className={className} strokeWidth={strokeWidth} />
+);
+export const NavProgressIcon = ({ className = 'w-5 h-5', strokeWidth = 2.25 }) => (
+  <TrendingUp className={className} strokeWidth={strokeWidth} />
+);
 
 // 4-Tier Development Status Icons (ZERO EMOJIS)
 export const StrengthIcon = ({ className = 'w-4 h-4 text-emerald-400' }) => <Award className={className} />;
@@ -81,7 +100,7 @@ export const AlertTriangleIcon = ({ className = 'w-4 h-4' }) => <AlertTriangle c
 export const HeartPulseIcon = ({ className = 'w-4 h-4' }) => <HeartPulse className={className} />;
 export const ActivityIcon = ({ className = 'w-4 h-4' }) => <Activity className={className} />;
 
-// ── PRECISION VECTOR SPORT ICONS (ZERO EMOJIS) ─────────────────────────────
+// ── PRECISION VECTOR SPORT ICONS (ZERO EMOJIS, UNIFIED PROPORTIONS) ────────
 export const CricketIcon = ({ className = 'w-5 h-5' }) => (
   <svg
     viewBox="0 0 24 24"
@@ -92,14 +111,16 @@ export const CricketIcon = ({ className = 'w-5 h-5' }) => (
     strokeLinejoin="round"
     className={className}
   >
-    {/* Cricket Bat */}
-    <path d="M14.5 3.5l6 6-8.5 8.5c-.8.8-2 .8-2.8 0l-3.2-3.2c-.8-.8-.8-2 0-2.8l8.5-8.5z" />
-    <path d="M18.5 7.5l2-2" />
-    <path d="M19.5 4.5l1-1" />
-    {/* Stitched Ball */}
-    <circle cx="6" cy="18" r="3.5" />
-    <path d="M4 16.5c1 1 3 1 4 0" strokeDasharray="1 1" />
-    <path d="M4 19.5c1-1 3-1 4 0" strokeDasharray="1 1" />
+    {/* Cane Handle with Grip Cap */}
+    <path d="M19 2.5l-4.5 4.5" />
+    <path d="M17.5 2l2 2" />
+    {/* Contoured Willow Blade */}
+    <path d="M14 7.5l-7.5 7.5c-.6.6-1 1.4-.9 2.2l.4 2.3 2.3.4c.8.1 1.6-.3 2.2-.9l7.5-7.5-4-4z" />
+    {/* Blade Spine Ridge */}
+    <line x1="12.5" y1="9" x2="8.5" y2="13" />
+    {/* Seamed Cricket Ball */}
+    <circle cx="16.5" cy="16.5" r="3.5" />
+    <path d="M14.5 15.5c.8.8 1.8 1 2.5.5s1.2-.5 2 .5" />
   </svg>
 );
 
@@ -113,16 +134,20 @@ export const FootballIcon = ({ className = 'w-5 h-5' }) => (
     strokeLinejoin="round"
     className={className}
   >
-    {/* Outer Ball */}
+    {/* Outer Sphere */}
     <circle cx="12" cy="12" r="9" />
-    {/* Central Pentagon */}
-    <polygon points="12,8 15,10.5 14,14 10,14 9,10.5" fill="currentColor" fillOpacity="0.2" />
-    {/* Seam Lines extending to perimeter */}
-    <line x1="12" y1="8" x2="12" y2="3" />
-    <line x1="15" y1="10.5" x2="19.5" y2="9" />
-    <line x1="14" y1="14" x2="17.5" y2="18" />
-    <line x1="10" y1="14" x2="6.5" y2="18" />
-    <line x1="9" y1="10.5" x2="4.5" y2="9" />
+    {/* Central Pentagon Panel */}
+    <polygon
+      points="12 8.5 15.2 10.8 14 14.6 10 14.6 8.8 10.8"
+      fill="currentColor"
+      fillOpacity="0.15"
+    />
+    {/* Radiating Seam Lines */}
+    <line x1="12" y1="8.5" x2="12" y2="3" />
+    <line x1="15.2" y1="10.8" x2="19.8" y2="9.3" />
+    <line x1="14" y1="14.6" x2="17.3" y2="19.3" />
+    <line x1="10" y1="14.6" x2="6.7" y2="19.3" />
+    <line x1="8.8" y1="10.8" x2="4.2" y2="9.3" />
   </svg>
 );
 
@@ -138,12 +163,12 @@ export const BasketballIcon = ({ className = 'w-5 h-5' }) => (
   >
     {/* Basketball Sphere */}
     <circle cx="12" cy="12" r="9" />
-    {/* Center Horizontal & Vertical Lines */}
+    {/* Perpendicular Seam Channels */}
     <line x1="3" y1="12" x2="21" y2="12" />
     <line x1="12" y1="3" x2="12" y2="21" />
-    {/* Curved Side Seams */}
-    <path d="M5.5 5.5c4 3.5 4 9.5 0 13" />
-    <path d="M18.5 5.5c-4 3.5-4 9.5 0 13" />
+    {/* Geometric Side Seam Curves */}
+    <path d="M5.6 5.6C8.8 8.8 8.8 15.2 5.6 18.4" />
+    <path d="M18.4 5.6C15.2 8.8 15.2 15.2 18.4 18.4" />
   </svg>
 );
 
@@ -157,22 +182,24 @@ export const AthleticsIcon = ({ className = 'w-5 h-5' }) => (
     strokeLinejoin="round"
     className={className}
   >
-    {/* Runner Head */}
-    <circle cx="15.5" cy="5.5" r="2" />
-    {/* Torso & Arms in Drive Posture */}
-    <path d="M8 12l4-3 3.5 2 3-2" />
-    {/* Lead Leg (Knee Punch) */}
-    <path d="M12 9l-1 5 4 3 2 4" />
-    {/* Trailing Leg (Full Hip Extension) */}
-    <path d="M11 14l-4 1-3 4" />
+    {/* Sprinter Head */}
+    <circle cx="16" cy="4.5" r="2" />
+    {/* Torso & Arm Drive */}
+    <path d="M7.5 13.5l3.5-3 3 1.5 4-2" />
+    {/* Lead Knee Drive */}
+    <path d="M12.5 10.5l2.5 4-1.5 4.5" />
+    {/* Push-off Trail Leg */}
+    <path d="M11 11.5l-3.5 3.5-4 1" />
+    {/* Sprint Track Baseline */}
+    <path d="M3 21h18" />
   </svg>
 );
 
 /**
- * Dynamic sport vector icon resolver
+ * Dynamic sport vector icon resolver (Centralized for all sports)
  */
 export const SportIcon = ({ sport, className = 'w-5 h-5' }) => {
-  const s = String(sport || '').toLowerCase();
+  const s = String(sport || '').toLowerCase().trim();
   if (s.includes('cricket')) return <CricketIcon className={className} />;
   if (s.includes('foot') || s.includes('soccer')) return <FootballIcon className={className} />;
   if (s.includes('basket')) return <BasketballIcon className={className} />;

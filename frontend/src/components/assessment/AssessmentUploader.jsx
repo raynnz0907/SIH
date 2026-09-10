@@ -7,7 +7,6 @@ import {
   VideoIcon,
   ZapIcon,
   AlertTriangleIcon,
-  CheckIcon,
   CloseIcon,
 } from '../common/Icons';
 
@@ -90,7 +89,7 @@ export default function AssessmentUploader({
         throw new Error('No job ID returned from assessment server.');
       }
 
-      // Visual progress progression while waiting for computer-vision pipeline
+      // Visual progress progression while waiting for CV pipeline
       setStage('quality_gate');
       const stageTimer1 = setTimeout(() => setStage('analyzing'), 2500);
       const stageTimer2 = setTimeout(() => setStage('preparing'), 6000);
@@ -162,8 +161,8 @@ export default function AssessmentUploader({
   const isBusy = stage !== 'idle';
 
   return (
-    <div id="recording-uploader" className="space-y-4">
-      {/* Hidden native inputs */}
+    <div id="recording-uploader" className="space-y-3 select-none">
+      {/* Hidden native file/camera inputs */}
       <input
         type="file"
         ref={chooseInputRef}
@@ -182,29 +181,28 @@ export default function AssessmentUploader({
 
       {/* Error alert */}
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-3">
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5">
           <AlertTriangleIcon className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <span className="font-bold font-tech uppercase tracking-wide block">
-              Notice
-            </span>
-            <span className="font-sans leading-relaxed">{errorMsg}</span>
+          <div className="space-y-0.5 font-sans leading-relaxed">
+            <span className="font-bold block">Assessment Notice</span>
+            <span>{errorMsg}</span>
           </div>
         </div>
       )}
 
-      {/* Mobile Camera Viewfinder / Video Preview Card */}
-      <div className="sportify-card p-4 border border-white/15 relative overflow-hidden bg-gradient-to-b from-[#0F111A] to-[#07080C] shadow-2xl">
-        {/* Viewfinder Target Reticles */}
+      {/* Dominant Viewfinder & Capture Card */}
+      <div className="rounded-2xl bg-[#0A0C13]/90 backdrop-blur-md border border-white/[0.08] p-4 sm:p-5 relative overflow-hidden shadow-xl hover:border-white/15 transition-all">
+        {/* Reticle brackets */}
         <div className="viewfinder-corner-tl" />
         <div className="viewfinder-corner-tr" />
         <div className="viewfinder-corner-bl" />
         <div className="viewfinder-corner-br" />
 
         {videoPreviewUrl ? (
+          /* Video Review Mode */
           <div className="space-y-3 relative z-10">
-            <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.08]">
-              <div className="flex items-center gap-2 text-xs font-bold font-tech text-white uppercase tracking-wider">
+            <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Recording Ready</span>
               </div>
@@ -215,83 +213,78 @@ export default function AssessmentUploader({
                   setVideoPreviewUrl(null);
                 }}
                 disabled={isBusy}
-                className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors active-press"
+                className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
               >
                 <CloseIcon className="w-3.5 h-3.5" />
                 <span>Retake</span>
               </button>
             </div>
 
-            <div className="rounded-xl overflow-hidden border border-white/20 bg-black shadow-inner relative">
+            <div className="rounded-xl overflow-hidden border border-white/15 bg-black">
               <video
                 src={videoPreviewUrl}
                 controls
                 playsInline
-                className="w-full max-h-[220px] object-contain mx-auto"
+                className="w-full max-h-[240px] object-contain mx-auto"
               />
             </div>
 
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-1">
-              <span className="truncate max-w-[180px]">{selectedFile?.name || 'Movement recording'}</span>
+            <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-1">
+              <span className="truncate max-w-[200px]">{selectedFile?.name || 'video_recording.mp4'}</span>
               <span>{(selectedFile?.size / (1024 * 1024)).toFixed(1)} MB</span>
             </div>
           </div>
         ) : (
-          <div className="py-4 text-center space-y-2.5 relative z-10">
-            {/* Viewfinder Telemetry Header */}
-            <div className="flex items-center justify-center gap-2 text-[9px] font-mono text-slate-400 uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              <span>Vision Tracking Ready</span>
+          /* Empty Capture Mode */
+          <div className="py-4 text-center space-y-3 relative z-10">
+            <div className="w-12 h-12 rounded-xl bg-white/[0.05] border border-white/15 flex items-center justify-center mx-auto text-white">
+              <VideoIcon className="w-6 h-6" />
             </div>
 
-            <div className="w-11 h-11 rounded-xl bg-white/[0.05] border border-white/20 flex items-center justify-center mx-auto text-white shadow-[0_4px_16px_rgba(0,0,0,0.6)]">
-              <VideoIcon className="w-5 h-5 text-white" />
-            </div>
-
-            <div className="max-w-xs mx-auto">
-              <h3 className="text-xs font-bold text-white font-heading tracking-tight">
-                {uploadLabel || `Record or Choose ${activeProtocolName || 'Assessment'} Video`}
+            <div>
+              <h3 className="text-sm font-bold text-white font-heading">
+                {uploadLabel || `Capture ${activeProtocolName || 'Movement'}`}
               </h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans leading-relaxed">
+              <p className="text-xs text-slate-400 mt-0.5 font-sans">
                 Full-body framing • High contrast • 30–60 FPS
               </p>
             </div>
 
-            {/* Mobile Dual Action Buttons */}
-            <div className="flex gap-2 pt-1">
+            {/* Clear, dominant mobile action buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 max-w-sm mx-auto pt-1">
               <button
                 type="button"
                 onClick={() => recordInputRef.current?.click()}
                 disabled={isBusy}
-                className="flex-1 h-11 btn-primary text-[11px] px-2 flex items-center justify-center gap-1.5 uppercase tracking-wider active-press shadow-[0_4px_16px_rgba(255,255,255,0.15)]"
+                className="flex-1 h-11 btn-primary text-xs flex items-center justify-center gap-2"
               >
-                <VideoIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>Record</span>
+                <VideoIcon className="w-4 h-4 text-slate-950" />
+                <span>Record Video</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => chooseInputRef.current?.click()}
                 disabled={isBusy}
-                className="flex-1 h-11 btn-secondary text-[11px] px-2 flex items-center justify-center gap-1.5 active-press"
+                className="flex-1 h-11 btn-secondary text-xs flex items-center justify-center gap-2"
               >
-                <UploadIcon className="w-3.5 h-3.5 shrink-0" />
-                <span>Upload</span>
+                <UploadIcon className="w-4 h-4 text-slate-300" />
+                <span>Choose File</span>
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Processing State & Submit Button */}
+      {/* Processing State or Dominant Analyze Button */}
       {isBusy ? (
-        <div className="p-6 rounded-xl bg-white/[0.04] border border-white/20 text-center space-y-3">
-          <div className="w-7 h-7 rounded-full border-2 border-white border-t-transparent animate-spin mx-auto" />
-          <p className="text-sm font-bold font-tech text-white">
+        <div className="p-6 rounded-2xl bg-[#0C0E14]/80 backdrop-blur-md border border-white/[0.08] text-center space-y-2.5 shadow-lg">
+          <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin mx-auto" />
+          <p className="text-sm font-bold font-heading text-white">
             {getStageLabel()}
           </p>
-          <p className="text-[11px] text-slate-400 font-sans">
-            Please keep this tab open while movement analysis completes.
+          <p className="text-xs text-slate-400 font-sans">
+            Please keep this tab open while kinematic processing completes.
           </p>
         </div>
       ) : (
@@ -299,7 +292,7 @@ export default function AssessmentUploader({
           <button
             type="button"
             onClick={handleStartAnalysis}
-            className="btn-primary w-full py-3.5 text-xs tracking-widest flex items-center justify-center gap-2 uppercase"
+            className="btn-primary w-full h-12 text-xs font-bold tracking-wide flex items-center justify-center gap-2"
           >
             <ZapIcon className="w-4 h-4 text-slate-950" />
             <span>{analyzeButtonLabel || `Analyze ${activeProtocolName || 'Movement'}`}</span>

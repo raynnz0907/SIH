@@ -1,25 +1,19 @@
 import json
 import re
 from typing import Dict, List, Optional, Any
-import ollama
 
 from .exercise_service import exercise_service
 from .taxonomy_service import taxonomy_service
-
-OLLAMA_MODEL = "mistral"
-OLLAMA_FALLBACK_MODEL = "llama3.2"
-OLLAMA_HOST = "http://localhost:11434"
 
 
 class PlanGenerator:
     """
     Evidence-Grounded Training and Recovery Pathway Generator.
     Uses ExerciseService as the ground-truth catalog for exercise prescription,
-    and grounds Ollama LLM in structured assessment findings and athlete profile constraints.
+    and grounds Gemini LLM in structured assessment findings and athlete profile constraints.
     """
 
     def __init__(self):
-        self.client = ollama.Client(host=OLLAMA_HOST)
         self.exercises = exercise_service
         self.taxonomy = taxonomy_service
 
@@ -77,11 +71,7 @@ class PlanGenerator:
         return {
             "_source": "catalog_grounded",
             "plan_title": f"4-Week {sport.title()} {role_title} Development Pathway",
-            "plan_summary": (
-                f"Personalized 4-week training block for {role_title} ({sport.title()}) with primary focus "
-                f"on {top_focus}. Sessions are programmed at {days_per_week} days/week ({session_mins} min/session) "
-                f"with progressive overload from foundational mechanics to sport-specific power output."
-            ),
+            "plan_summary": f"Targeted progressive overload focusing on {top_focus}.",
             "primary_focus_attributes": [b.get("attribute") for b in primary_bottlenecks[:3]],
             "weeks": base_weeks,
             "recovery_protocol": self.generate_recovery_plan(athlete_profile, primary_bottlenecks),
@@ -250,37 +240,25 @@ Strict Rules:
   ]
 }}"""
 
-        for model in [OLLAMA_MODEL, OLLAMA_FALLBACK_MODEL]:
-            try:
-                response = self.client.chat(
-                    model=model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are an elite sports coach. Respond ONLY with valid JSON. "
-                                "Never invent unobserved flaws or ungrounded exercises."
-                            ),
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    options={"temperature": 0.2, "num_predict": 4096},
-                )
-                raw = response["message"]["content"].strip()
-                raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
-                raw = re.sub(r"```$", "", raw, flags=re.MULTILINE).strip()
-                m = re.search(r"\{.*\}", raw, re.DOTALL)
-                if m:
-                    plan = json.loads(m.group())
-                    if "weeks" in plan and len(plan["weeks"]) >= 1:
-                        # Ensure full 4 weeks are present (if LLM truncated, merge with catalog base)
-                        if len(plan["weeks"]) < 4:
-                            plan["weeks"] = base_weeks
-                        plan["_source"] = f"ollama:{model}"
-                        plan["recovery_protocol"] = self.generate_recovery_plan(athlete_profile, bottlenecks)
-                        return plan
-            except Exception:
-                continue
+        try:
+            from .gemini_service import gemini_service
+            plan = gemini_service.generate_json(
+                prompt=prompt,
+                system_instruction=(
+                    "You are an elite sports coach. Respond ONLY with valid JSON. "
+                    "Never invent unobserved flaws or ungrounded exercises."
+                ),
+                temperature=0.2,
+            )
+            if plan and "weeks" in plan and len(plan["weeks"]) >= 1:
+                # Ensure full 4 weeks are present (if LLM truncated, merge with catalog base)
+                if len(plan["weeks"]) < 4:
+                    plan["weeks"] = base_weeks
+                plan["_source"] = "gemini"
+                plan["recovery_protocol"] = self.generate_recovery_plan(athlete_profile, bottlenecks)
+                return plan
+        except Exception:
+            pass
 
         return None
 

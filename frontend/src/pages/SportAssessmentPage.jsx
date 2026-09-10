@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAthleteStore } from '../store/athleteStore';
+import { assessmentAPI } from '../api/client';
 import {
   normalizeSport,
   getSportAssessmentContext,
@@ -21,8 +22,27 @@ export default function SportAssessmentPage() {
 
   const profile = useAthleteStore((state) => state.profile);
   const profileStatus = useAthleteStore((state) => state.profileStatus);
+  const currentAssessment = useAthleteStore((state) => state.currentAssessment);
+  const setAssessment = useAthleteStore((state) => state.setAssessment);
 
   const [selectedProtocolId, setSelectedProtocolId] = useState(null);
+
+  // Hydrate latest assessment if not already in store
+  useEffect(() => {
+    async function loadLatestAssessment() {
+      if (!currentAssessment) {
+        try {
+          const res = await assessmentAPI.getLatest();
+          if (res?.assessment) {
+            setAssessment(res.assessment);
+          }
+        } catch {
+          // No prior assessment yet
+        }
+      }
+    }
+    loadLatestAssessment();
+  }, [currentAssessment, setAssessment]);
 
   // Derived normalized sport values
   const athleteSportNormalized = profile?.sport ? normalizeSport(profile.sport) : null;
@@ -58,7 +78,7 @@ export default function SportAssessmentPage() {
       <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 select-none">
         <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
         <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
-          Loading Calibrated Assessment Studio...
+          Loading Assessment...
         </p>
       </div>
     );
@@ -76,7 +96,7 @@ export default function SportAssessmentPage() {
             Athlete Profile Incomplete
           </h2>
           <p className="text-xs text-slate-400 font-sans mt-1 leading-relaxed">
-            Please configure your sport, playing position, and baseline biometrics to access calibrated movement protocols.
+            Configure your sport and position to access calibrated movement protocols.
           </p>
         </div>
         <button
@@ -103,7 +123,7 @@ export default function SportAssessmentPage() {
             Sport Protocol Not Supported
           </h2>
           <p className="text-xs text-slate-400 font-sans mt-1 leading-relaxed">
-            "{rawSportParam}" does not currently have a calibrated movement vision pipeline.
+            "{rawSportParam}" vision pipeline is currently in development.
           </p>
         </div>
         <button
@@ -186,7 +206,7 @@ export default function SportAssessmentPage() {
 
       {/* 3. All-Rounder Focus Switcher (Cricket All-Rounder only) */}
       {assessmentContext.roleConfig.allowFocusChoice && (
-        <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-2">
+        <div className="rounded-2xl bg-[#0C0E14]/80 backdrop-blur-md border border-white/[0.08] p-4 sm:p-5 space-y-2 shadow-lg">
           <div className="flex items-center gap-2 text-xs font-bold font-tech text-white uppercase tracking-wider">
             <SlidersIcon className="w-3.5 h-3.5 text-slate-300" />
             <span>Select All-Rounder Focus Today</span>
@@ -213,19 +233,19 @@ export default function SportAssessmentPage() {
         </div>
       )}
 
-      {/* 4. Native iOS-Style Segmented Protocol Switcher */}
+      {/* 4. Native Segmented Protocol Switcher */}
       <div className="space-y-1.5">
-        <div className="text-[10px] font-bold font-tech uppercase tracking-wider text-slate-400 px-0.5">
-          Select Active Protocol
+        <div className="text-xs font-medium text-slate-400 px-0.5">
+          Choose Protocol
         </div>
-        <div className="p-1 rounded-xl bg-white/[0.04] border border-white/10 flex gap-1 overflow-x-auto no-scrollbar">
+        <div className="p-1 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm flex gap-1 overflow-x-auto no-scrollbar">
           {/* Primary Recommended Protocol Tab */}
           <button
             type="button"
             onClick={() => setSelectedProtocolId(assessmentContext.primaryProtocolId)}
-            className={`flex-1 min-w-[120px] py-2 px-3 rounded-lg text-xs font-bold font-tech tracking-wide transition-all active-press text-center truncate ${
+            className={`flex-1 min-w-[120px] py-2 px-3 rounded-lg text-xs font-sans font-medium transition-all text-center truncate ${
               activeProtocolId === assessmentContext.primaryProtocolId
-                ? 'bg-white text-slate-950 shadow-md'
+                ? 'bg-white text-slate-950 font-semibold shadow-sm'
                 : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
             }`}
           >
@@ -238,9 +258,9 @@ export default function SportAssessmentPage() {
               key={opt.protocolId}
               type="button"
               onClick={() => setSelectedProtocolId(opt.protocolId)}
-              className={`flex-1 min-w-[110px] py-2 px-3 rounded-lg text-xs font-bold font-tech tracking-wide transition-all active-press text-center truncate ${
+              className={`flex-1 min-w-[110px] py-2 px-3 rounded-lg text-xs font-sans font-medium transition-all text-center truncate ${
                 activeProtocolId === opt.protocolId
-                  ? 'bg-white text-slate-950 shadow-md'
+                  ? 'bg-white text-slate-950 font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
@@ -250,26 +270,7 @@ export default function SportAssessmentPage() {
         </div>
       </div>
 
-      {/* 5. Active Protocol Card & Camera Setup Guide */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-        <PrimaryProtocolCard
-          protocol={activeProtocolCardData}
-          status={activeCapabilityStatus}
-          roleReason={activeRoleReason}
-          isSelected={true}
-          onSelect={() => {}}
-          onTriggerAction={handleScrollToUploader}
-        />
-
-        <CameraSetupGuide
-          steps={activeProtocolGuide.steps}
-          protocolName={activeProtocolName}
-          repetitionCount={activeProtocolGuide.repetitionCount}
-          warningMessage={activeProtocolGuide.warningMessage}
-        />
-      </div>
-
-      {/* 6. Recording & Upload Module (Dynamically labeled to active protocol!) */}
+      {/* 5. Dominant Capture Station (Recording & Upload) */}
       <AssessmentUploader
         sportKey={assessmentContext.sportKey}
         primaryRole={profile.primary_role}
@@ -279,6 +280,24 @@ export default function SportAssessmentPage() {
         uploadLabel={activeProtocolGuide.uploadLabel}
         analyzeButtonLabel={activeProtocolGuide.analyzeButtonLabel}
       />
+
+      {/* 6. Active Protocol Details & Visual Camera Setup Guide */}
+      <div className="space-y-3.5">
+        <PrimaryProtocolCard
+          protocol={activeProtocolCardData}
+          status={activeCapabilityStatus}
+          roleReason={activeRoleReason}
+          isSelected={true}
+          onSelect={() => {}}
+        />
+
+        <CameraSetupGuide
+          steps={activeProtocolGuide.steps}
+          protocolName={activeProtocolName}
+          repetitionCount={activeProtocolGuide.repetitionCount}
+          warningMessage={activeProtocolGuide.warningMessage}
+        />
+      </div>
 
       {/* 7. Secondary Foundational Baselines Switcher */}
       <FoundationalSection

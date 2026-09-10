@@ -173,8 +173,6 @@ class PoseAnalyzer:
                 "drills": [],
             }
 
-        import ollama
-
         scores_summary = "\n".join(
             [f"  - {k.replace('_', ' ').title()}: {v:.0f}/100" for k, v in movement_scores.items()]
         )
@@ -218,25 +216,14 @@ Rules:
 }}"""
 
         try:
-            client = ollama.Client(host="http://localhost:11434")
-            resp = client.chat(
-                model="mistral",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an elite sports coach. Respond ONLY with valid JSON.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                options={"temperature": 0.2, "num_predict": 2048},
+            from .gemini_service import gemini_service
+            res = gemini_service.generate_json(
+                prompt=prompt,
+                system_instruction="You are an elite sports biomechanics coach. Respond ONLY with valid JSON grounded strictly in observed metrics.",
+                temperature=0.2,
             )
-            raw = resp["message"]["content"].strip()
-            raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
-            raw = re.sub(r"```$", "", raw, flags=re.MULTILINE).strip()
-            m = re.search(r"\{.*\}", raw, re.DOTALL)
-            if m:
-                res = json.loads(m.group())
-                res["_source"] = "mistral"
+            if res:
+                res["_source"] = "gemini"
                 return res
         except Exception:
             pass

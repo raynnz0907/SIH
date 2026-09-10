@@ -5,14 +5,10 @@ import {
   DumbbellIcon,
   ClockIcon,
   CheckIcon,
-  TargetIcon,
-  ZapIcon,
   CalendarIcon,
-  FlameIcon,
-  PlusIcon,
-  ArrowRightIcon,
+  ZapIcon,
   CloseIcon,
-  InfoIcon,
+  FlameIcon,
 } from '../components/common/Icons';
 
 export default function TrainingPlan() {
@@ -45,7 +41,6 @@ export default function TrainingPlan() {
           setPlanData(res.plan_data);
         }
       } catch (err) {
-        console.log('No active plan found, generating initial plan...');
         handleGeneratePlan();
       } finally {
         setLoading(false);
@@ -107,10 +102,10 @@ export default function TrainingPlan() {
 
   if (loading || generating) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 select-none">
-        <div className="w-8 h-8 rounded-full border-2 border-white border-t-transparent animate-spin" />
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 select-none">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
         <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
-          {generating ? 'Synthesizing 4-Week Pathway from Exercise Library...' : 'Loading Training Pathway...'}
+          {generating ? 'Synthesizing 4-Week Training Pathway...' : 'Loading Training Pathway...'}
         </p>
       </div>
     );
@@ -120,177 +115,200 @@ export default function TrainingPlan() {
   const currentWeekData = weeks.find((w) => w.week_number === selectedWeek) || weeks[0];
   const sessions = currentWeekData?.sessions || [];
 
+  const formatConciseSummary = (summary) => {
+    if (!summary) return 'Targeted progressive overload for your movement priorities.';
+    const focusMatch = summary.match(/primary focus on ([^.]+)/i);
+    if (focusMatch) {
+      return `Targeted progressive overload focusing on ${focusMatch[1].trim()}.`;
+    }
+    const firstSentence = summary.split(/\.\s+/)[0];
+    return firstSentence.endsWith('.') ? firstSentence : `${firstSentence}.`;
+  };
+
   return (
-    <div className="space-y-8 select-none">
-      {/* ── TOP HERO HEADER ─────────────────────────────────────────────────── */}
-      <div className="sportify-card p-5 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col items-start gap-4">
+    <div className="space-y-4 select-none pb-8">
+      {/* ── 1. TOP HERO: WORKOUT CONTEXT & DISCREET REGENERATE ────────────────── */}
+      <section className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-md border border-white/[0.08] p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-bold font-tech text-white tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full bg-white/[0.06] border border-white/15">
-                4-Week Development Pathway
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[11px] font-sans font-medium text-slate-300 px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/10">
+                4-Week Training Pathway
               </span>
-              <span className="text-xs font-mono text-slate-400 uppercase">
-                {profile?.sport || 'Cricket'} • {profile?.sub_role?.replace(/_/g, ' ') || profile?.primary_role || 'Athlete'}
+              <span className="text-xs font-mono text-slate-400">
+                Week {selectedWeek} of {weeks.length || 4}
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold font-heading tracking-wide uppercase text-white">
+            <h1 className="text-xl sm:text-2xl font-extrabold font-heading text-white tracking-tight">
               {planData?.plan_title || 'Personalized Training Pathway'}
             </h1>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed font-sans">
-              {planData?.plan_summary || 'Targeted progressive overload calibrated to your development priorities.'}
+            <p className="text-xs text-slate-400 mt-1 font-sans max-w-xl">
+              {formatConciseSummary(planData?.plan_summary)}
             </p>
           </div>
 
+          {/* Discreet secondary regenerate action */}
           <button
             onClick={handleGeneratePlan}
             disabled={generating}
-            className="btn-secondary text-xs px-4 py-2.5 flex items-center justify-center gap-2 w-full active-press"
+            className="btn-ghost text-xs flex items-center gap-1.5 px-3 py-1.5 shrink-0 border border-white/10"
+            title="Regenerate Plan"
           >
-            <ZapIcon className="w-3.5 h-3.5 text-slate-300" />
-            <span>Regenerate Pathway</span>
+            <ZapIcon className="w-3.5 h-3.5 text-slate-400" />
+            <span>Regenerate Plan</span>
           </button>
         </div>
-      </div>
 
-      {/* ── 4-WEEK PHASE SELECTOR TABS ─────────────────────────────────────── */}
-      <div className="grid grid-cols-4 p-1 rounded-xl bg-white/[0.04] border border-white/10 gap-1">
-        {weeks.map((wk) => {
-          const active = selectedWeek === wk.week_number;
-          return (
-            <button
-              key={wk.week_number}
-              type="button"
-              onClick={() => setSelectedWeek(wk.week_number)}
-              className={`py-1.5 px-1 rounded-lg text-center transition-all active-press ${
-                active
-                  ? 'bg-white text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <div className="text-[11px] font-bold font-tech uppercase">
-                W0{wk.week_number}
-              </div>
-              <div className="text-[9px] font-mono truncate opacity-75">
-                {wk.sessions?.length || 4} sess
-              </div>
-            </button>
-          );
-        })}
-      </div>
+        {/* ── 2. LIGHTWEIGHT 4-WEEK PHASE SELECTOR TABS ──────────────────────── */}
+        <div className="grid grid-cols-4 p-1 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm gap-1 mt-4 text-center">
+          {weeks.map((wk) => {
+            const active = selectedWeek === wk.week_number;
+            return (
+              <button
+                key={wk.week_number}
+                type="button"
+                onClick={() => setSelectedWeek(wk.week_number)}
+                className={`py-2 px-1 rounded-lg text-center transition-all ${
+                  active
+                    ? 'bg-white text-slate-950 font-semibold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <div className="text-xs font-sans font-medium">
+                  Week {wk.week_number}
+                </div>
+                <div className="text-[10px] font-mono opacity-70">
+                  {wk.sessions?.length || 0} sess
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-      {/* ── SESSIONS LIST FOR SELECTED WEEK ────────────────────────────────── */}
-      <div className="space-y-3">
-        <div>
-          <h2 className="text-xs font-bold font-heading tracking-wider uppercase text-white">
-            {currentWeekData?.week_theme || `Week ${selectedWeek} Schedule`}
+      {/* ── 3. WEEK SESSIONS WORKFLOW ────────────────────────────────────────── */}
+      <section className="space-y-3">
+        <div className="px-0.5">
+          <h2 className="text-sm font-bold font-heading text-white">
+            {currentWeekData?.week_theme || `Week ${selectedWeek} Sessions`}
           </h2>
-          <p className="text-[10px] text-slate-400 font-sans">
-            Calibrated against verified exercise library catalog.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
           {sessions.map((session, idx) => (
             <div
               key={idx}
-              className="sportify-card p-3.5 border-white/[0.08] space-y-3 hover:border-white/20 transition-all"
+              className="rounded-2xl bg-[#0C0E14]/80 backdrop-blur-md border border-white/[0.08] p-4 sm:p-5 space-y-3.5 hover:border-white/15 transition-all shadow-lg"
             >
               {/* Session Header */}
               <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
-                <div className="flex items-center gap-2.5 truncate">
-                  <div className="w-8 h-8 rounded-lg bg-white/[0.06] border border-white/15 flex items-center justify-center text-white font-bold font-mono text-xs shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white font-bold font-mono text-xs shrink-0">
                     D{session.day || idx + 1}
                   </div>
-                  <div className="truncate">
-                    <h3 className="text-xs font-bold text-white font-heading truncate">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-white font-heading truncate">
                       {session.session_name}
                     </h3>
-                    <p className="text-[10px] text-slate-400 font-sans truncate">
-                      {session.rationale}
-                    </p>
+                    {session.type && (
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 block">
+                        {session.type}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono bg-white/[0.03] px-2 py-1 rounded-lg border border-white/[0.06] shrink-0">
-                  <ClockIcon className="w-3 h-3 text-slate-300" />
+                <div className="flex items-center gap-1 text-xs text-slate-400 font-mono px-2 py-1 rounded-md bg-white/[0.02] border border-white/[0.05] shrink-0">
+                  <ClockIcon className="w-3.5 h-3.5 text-slate-400" />
                   <span>{session.duration_minutes || 60}m</span>
                 </div>
               </div>
 
-              {/* Main Exercises List */}
-              <div className="space-y-1.5">
-                {session.main_exercises?.map((ex, exIdx) => (
-                  <div
-                    key={exIdx}
-                    className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06] space-y-1"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-xs text-white font-tech truncate">
-                        {ex.name}
-                      </span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/15 text-slate-200 shrink-0">
-                        {ex.sets} × {ex.reps}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
-                      <span>Rest: {ex.rest_seconds || 90}s</span>
-                      <span className="uppercase text-slate-300">
-                        {ex.targets_bottleneck?.replace(/_/g, ' ') || 'Strength'}
-                      </span>
-                    </div>
-
-                    {ex.coaching_cue && (
-                      <p className="text-[10px] text-slate-400 italic font-sans border-l border-white/15 pl-1.5 mt-1">
-                        "{ex.coaching_cue}"
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Warmup & Cooldown Summary */}
-              <div className="grid grid-cols-2 gap-2 text-[10px]">
-                <div className="p-2 rounded-lg bg-white/[0.01] border border-white/[0.04]">
-                  <span className="font-tech text-slate-300 uppercase block font-bold mb-0.5">
+              {/* Integrated Warm-Up (Concise scannable label) */}
+              {session.warmup && session.warmup.length > 0 && (
+                <div className="border-l-2 border-white/20 pl-3 py-0.5 space-y-0.5">
+                  <span className="text-[10px] font-sans font-semibold text-slate-400 uppercase tracking-wider block">
                     Warm-Up
                   </span>
-                  <p className="text-slate-400 truncate">
-                    {session.warmup?.join(' • ') || '5m dynamic prep'}
+                  <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                    {session.warmup.join(' • ')}
                   </p>
                 </div>
-                <div className="p-2 rounded-lg bg-white/[0.01] border border-white/[0.04]">
-                  <span className="font-tech text-emerald-400 uppercase block font-bold mb-0.5">
-                    Cool-Down
-                  </span>
-                  <p className="text-slate-400 truncate">
-                    {session.cooldown?.join(' • ') || 'Static flush & reset'}
-                  </p>
+              )}
+
+              {/* Scannable Exercises */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-sans font-semibold text-slate-400 uppercase tracking-wider block">
+                  Exercises ({session.main_exercises?.length || 0})
+                </span>
+
+                <div className="divide-y divide-white/[0.05] rounded-xl bg-white/[0.015] border border-white/[0.04] px-3.5 py-0.5">
+                  {session.main_exercises?.map((ex, exIdx) => (
+                    <div key={exIdx} className="py-2.5 space-y-1">
+                      {/* Name & Sets x Reps */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-xs sm:text-sm text-white font-sans truncate">
+                          {ex.name}
+                        </span>
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] text-slate-200 shrink-0">
+                          {ex.sets} × {ex.reps}
+                        </span>
+                      </div>
+
+                      {/* Rest & Target Bottleneck */}
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans">
+                        <span>Rest: {ex.rest_seconds || 90}s</span>
+                        {ex.targets_bottleneck && (
+                          <span className="text-slate-400 text-[10px] font-medium capitalize truncate max-w-[140px]">
+                            {ex.targets_bottleneck.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Coaching Cue */}
+                      {ex.coaching_cue && (
+                        <p className="text-xs text-slate-400 italic font-sans pl-0.5 pt-0.5">
+                          "{ex.coaching_cue}"
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Log Button */}
+              {/* Integrated Cool-Down (Concise scannable label) */}
+              {session.cooldown && session.cooldown.length > 0 && (
+                <div className="border-l-2 border-emerald-500/40 pl-3 py-0.5 space-y-0.5">
+                  <span className="text-[10px] font-sans font-semibold text-emerald-400 uppercase tracking-wider block">
+                    Cool-Down
+                  </span>
+                  <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                    {session.cooldown.join(' • ')}
+                  </p>
+                </div>
+              )}
+
+              {/* Natural Completion: Log Session Button */}
               <button
                 type="button"
                 onClick={() => handleOpenLogModal(session)}
-                className="w-full h-10 btn-primary text-xs flex items-center justify-center gap-1.5 active-press"
+                className="w-full h-11 btn-primary text-xs flex items-center justify-center gap-2 mt-1"
               >
-                <CheckIcon className="w-3.5 h-3.5" />
+                <CheckIcon className="w-4 h-4 text-slate-950" />
                 <span>Log Session</span>
               </button>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* ── LOG WORKOUT MODAL ──────────────────────────────────────────────── */}
+      {/* ── 4. LOG WORKOUT MODAL (Preserved 100% Functionally) ──────────────── */}
       {isLogModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="sportify-card max-w-md w-full p-4.5 rounded-t-2xl sm:rounded-2xl border-white/[0.1] shadow-2xl relative max-h-[88vh] overflow-y-auto">
+          <div className="sportify-card max-w-md w-full p-5 rounded-t-2xl sm:rounded-2xl border-white/[0.1] shadow-2xl relative max-h-[88vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.06]">
               <div>
-                <h3 className="text-base font-bold font-heading uppercase tracking-wide text-white">
+                <h3 className="text-base font-bold font-heading text-white">
                   Log Completed Session
                 </h3>
                 <p className="text-xs text-slate-400 font-sans">
@@ -320,7 +338,7 @@ export default function TrainingPlan() {
             ) : (
               <form onSubmit={handleSubmitLog} className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
                     Session Duration (Minutes)
                   </label>
                   <input
@@ -334,7 +352,7 @@ export default function TrainingPlan() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between text-xs font-bold font-tech uppercase text-slate-400 mb-1">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-1">
                     <span>Perceived Exertion (RPE)</span>
                     <span className="text-white font-mono text-sm">{logForm.perceived_exertion} / 10</span>
                   </div>
@@ -348,7 +366,7 @@ export default function TrainingPlan() {
                     }
                     className="w-full accent-white cursor-pointer"
                   />
-                  <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1">
+                  <div className="flex justify-between text-[11px] text-slate-500 font-mono mt-1">
                     <span>1 (Light)</span>
                     <span>5 (Moderate)</span>
                     <span>10 (Max Effort)</span>
@@ -356,7 +374,7 @@ export default function TrainingPlan() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
                     Session Notes
                   </label>
                   <textarea
@@ -370,19 +388,19 @@ export default function TrainingPlan() {
                   />
                 </div>
 
-                <div className="pt-2 flex items-center gap-3">
+                <div className="pt-2 flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setIsLogModalOpen(false)}
-                    className="w-1/3 py-3 rounded-xl btn-secondary text-xs"
+                    className="w-1/3 h-11 btn-secondary text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="w-2/3 py-3 rounded-xl btn-primary text-xs flex items-center justify-center gap-2"
+                    className="w-2/3 h-11 btn-primary text-xs flex items-center justify-center gap-2"
                   >
-                    <CheckIcon className="w-4 h-4" />
+                    <CheckIcon className="w-4 h-4 text-slate-950" />
                     <span>Confirm & Persist Log</span>
                   </button>
                 </div>

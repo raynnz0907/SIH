@@ -7,12 +7,7 @@ import { normalizeSport } from '../config/sportAssessmentConfig';
 import {
   ArrowRightIcon,
   CheckIcon,
-  TargetIcon,
-  ZapIcon,
-  DumbbellIcon,
-  ShieldIcon,
-  SlidersIcon,
-  ClockIcon,
+  ChevronDownIcon,
   SportIcon,
 } from '../components/common/Icons';
 
@@ -31,6 +26,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isSpecialtyOpen, setIsSpecialtyOpen] = useState(false);
 
   // Taxonomy & Objectives from backend
   const [sportsData, setSportsData] = useState({});
@@ -127,11 +123,6 @@ export default function Onboarding() {
     });
   };
 
-  /**
-   * Dedicated SIGN IN Handler
-   * Authenticates user, hydrates profile from backend, and routes safely.
-   * NEVER calls submitProfile() to prevent overwriting stored profiles!
-   */
   const handleSignInSubmit = async (e) => {
     e?.preventDefault();
     setLoading(true);
@@ -148,26 +139,16 @@ export default function Onboarding() {
         throw new Error('Authentication failed. No access token received.');
       }
 
-      // 1. Temporarily save token in store so axios interceptor uses it
       login({ email: authData.email }, token, null);
-
-      // 2. Hydrate athlete identity
       const me = await authAPI.getMe();
 
-      // 3. Fetch existing profile
       try {
         const existingProfile = await intakeAPI.getProfile();
         login(me, token, existingProfile);
 
-        const targetSport = normalizeSport(existingProfile.sport);
-        if (targetSport) {
-          navigate(`/assessment/${targetSport}`);
-        } else {
-          navigate('/dashboard');
-        }
+        navigate('/dashboard');
       } catch (profileErr) {
         if (profileErr.response?.status === 404) {
-          // Profile not yet created for this user
           login(me, token, null);
           setSearchParams({ mode: 'complete-profile' });
           setStep(1);
@@ -179,17 +160,13 @@ export default function Onboarding() {
     } catch (err) {
       setError(
         err.response?.data?.detail ||
-          'Incorrect email or password. Please verify your credentials.'
+        'Incorrect email or password. Please verify your credentials.'
       );
     } finally {
       setLoading(false);
     }
   };
 
-  /**
-   * REGISTRATION or COMPLETE-PROFILE Handler
-   * Creates account (if signup), submits chosen profileData, and routes to assessment.
-   */
   const handleProfileSubmit = async (e) => {
     e?.preventDefault();
     setLoading(true);
@@ -200,14 +177,12 @@ export default function Onboarding() {
       let me = athlete;
 
       if (!isCompleteProfile) {
-        // Step A: Register Account
         await authAPI.register({
           email: authData.email,
           password: authData.password,
           full_name: authData.full_name,
         });
 
-        // Step B: Authenticate
         const loginRes = await authAPI.login({
           email: authData.email,
           password: authData.password,
@@ -218,7 +193,6 @@ export default function Onboarding() {
         me = await authAPI.getMe();
       }
 
-      // Step C: Save Athlete Profile with selected sport & role data
       const savedProfile = await intakeAPI.submitProfile({
         sport: profileData.sport,
         discipline: profileData.discipline,
@@ -241,7 +215,7 @@ export default function Onboarding() {
     } catch (err) {
       setError(
         err.response?.data?.detail ||
-          'Failed to complete profile configuration. Please check your inputs.'
+        'Failed to complete profile configuration. Please check your inputs.'
       );
     } finally {
       setLoading(false);
@@ -249,10 +223,14 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#07080C] text-[#F1F5F9] flex flex-col w-full selection:bg-white/20 select-none relative overflow-x-hidden">
-      <div className="w-full max-w-xl mx-auto min-h-[100dvh] flex flex-col justify-between px-4 py-4 sm:py-6 relative z-10">
+    <div className="min-h-[100dvh] bg-[#07080C] text-[#F1F5F9] flex flex-col w-full selection:bg-white/20 select-none relative overflow-hidden">
+      {/* Ambient background depth for glass refraction */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[550px] h-[350px] bg-white/[0.02] blur-[130px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/3 -right-20 w-[300px] h-[300px] bg-emerald-500/[0.02] blur-[130px] rounded-full pointer-events-none" />
+
+      <div className="w-full max-w-lg mx-auto min-h-[100dvh] flex flex-col justify-center px-4 py-6 sm:py-10 relative z-10">
         {/* Top Header */}
-        <div className="w-full flex items-center justify-between mb-3 pt-safe">
+        <div className="w-full flex items-center justify-between mb-4">
           <SportifyLogo size="xs" showTagline={false} />
           {!isCompleteProfile && (
             <button
@@ -261,18 +239,21 @@ export default function Onboarding() {
                 setError(null);
                 setSearchParams({ mode: isSignIn ? 'signup' : 'signin' });
               }}
-              className="text-[11px] font-medium text-slate-300 hover:text-white font-tech tracking-wide px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all"
+              className="text-xs font-sans text-slate-300 hover:text-white px-3.5 py-1.5 rounded-lg border border-white/[0.09] bg-white/[0.03] backdrop-blur-md hover:bg-white/[0.07] hover:border-white/20 transition-all shadow-sm"
             >
               {isSignIn ? 'Need Account? Sign Up' : 'Have Account? Sign In'}
             </button>
           )}
         </div>
 
-        {/* Main Multi-Step Box */}
-        <div className="w-full sportify-card p-4 sm:p-6 border border-white/[0.1] shadow-2xl relative flex-1 flex flex-col justify-between my-2">
+        {/* Main Form Container */}
+        <div className="w-full p-5 sm:p-7 rounded-2xl bg-gradient-to-b from-[#10131E]/90 via-[#0B0D15]/90 to-[#07080E]/95 backdrop-blur-2xl border border-white/[0.09] shadow-[0_20px_60px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden">
+          {/* Top specular hairline */}
+          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
           {/* Step Progress Bar (hidden in sign-in mode) */}
           {!isSignIn && (
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.07]">
               {[
                 { num: 1, label: 'Sport' },
                 { num: 2, label: 'Goals' },
@@ -281,17 +262,19 @@ export default function Onboarding() {
               ].map((s) => (
                 <div key={s.num} className="flex items-center gap-1.5">
                   <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition-all ${
-                      step === s.num
-                        ? 'bg-white text-slate-950 shadow-[0_0_12px_rgba(255,255,255,0.35)]'
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold transition-all ${step === s.num
+                        ? 'bg-white text-slate-950 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
                         : step > s.num
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35'
-                        : 'bg-white/[0.04] text-slate-500 border border-white/[0.06]'
-                    }`}
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm'
+                          : 'bg-white/[0.03] text-slate-500 border border-white/[0.07] backdrop-blur-sm'
+                      }`}
                   >
-                    {step > s.num ? <CheckIcon className="w-3 h-3" /> : s.num}
+                    {step > s.num ? <CheckIcon className="w-3.5 h-3.5" /> : s.num}
                   </div>
-                  <span className="text-[10px] font-medium font-tech tracking-wide text-slate-400">
+                  <span
+                    className={`text-xs font-sans ${step === s.num ? 'text-white font-medium' : 'text-slate-400'
+                      }`}
+                  >
                     {s.label}
                   </span>
                 </div>
@@ -301,7 +284,7 @@ export default function Onboarding() {
 
           {/* Error Notification */}
           {error && (
-            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs mb-3 flex items-center gap-2 font-medium">
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs mb-3 flex items-center gap-2 font-sans">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping shrink-0" />
               <span>{error}</span>
             </div>
@@ -309,18 +292,18 @@ export default function Onboarding() {
 
           {/* ── DEDICATED SIGN IN FORM ────────────────────────────────────────── */}
           {isSignIn && (
-            <form onSubmit={handleSignInSubmit} className="space-y-3.5 my-auto">
+            <form onSubmit={handleSignInSubmit} className="space-y-4 my-auto">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
                   Sign In to Sportify
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Access your personalized biomechanical telemetry and development pathway.
+                  Access your personalized athlete profile and training pathway.
                 </p>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                <label className="text-xs font-medium text-slate-300 block mb-1">
                   Email Address
                 </label>
                 <input
@@ -336,7 +319,7 @@ export default function Onboarding() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                <label className="text-xs font-medium text-slate-300 block mb-1">
                   Password
                 </label>
                 <input
@@ -355,160 +338,183 @@ export default function Onboarding() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs ${
-                    loading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`w-full h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)] ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
                   <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-                  {!loading && <ArrowRightIcon className="w-3.5 h-3.5" />}
+                  {!loading && <ArrowRightIcon className="w-4 h-4 text-slate-950" />}
                 </button>
               </div>
 
-              <p className="text-center text-xs text-slate-500 pt-2">
+              <p className="text-center text-xs text-slate-400 pt-2 font-sans">
                 New athlete?{' '}
                 <button
                   type="button"
                   onClick={() => setSearchParams({ mode: 'signup' })}
-                  className="text-white hover:underline font-tech font-bold"
+                  className="text-white hover:underline font-semibold ml-1"
                 >
-                  Create your athlete profile
+                  Create your profile
                 </button>
               </p>
             </form>
           )}
 
-          {/* ── STEP 1: SPORT, DISCIPLINE & ROLE ───────────────────────────────── */}
+          {/* ── STEP 1: SPORT & POSITION ───────────────────────────────────────── */}
           {!isSignIn && step === 1 && (
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Select Sport & Role
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
+                  Tell us how you play
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Configures custom biomechanical demand weights and calibrated movement protocols.
+                  Choose your sport, playing position, and tactical specialty.
                 </p>
               </div>
 
               {/* Sport Selector */}
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 tracking-wider block mb-1.5">
-                  Primary Sport
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">
+                  Sport
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {Object.keys(sportsData).map((sportKey) => (
-                    <button
-                      key={sportKey}
-                      type="button"
-                      onClick={() => handleSportSelect(sportKey)}
-                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all ${
-                        profileData.sport === sportKey
-                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                          : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                      }`}
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0">
-                        <SportIcon sport={sportKey} className="w-3.5 h-3.5 text-slate-200" />
-                      </div>
-                      <span className="text-xs font-bold font-tech capitalize truncate">
-                        {sportsData[sportKey].name}
-                      </span>
-                    </button>
-                  ))}
+                  {Object.keys(sportsData).map((sportKey) => {
+                    const isSelected = profileData.sport === sportKey;
+                    return (
+                      <button
+                        key={sportKey}
+                        type="button"
+                        onClick={() => handleSportSelect(sportKey)}
+                        className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all ${isSelected
+                            ? 'bg-gradient-to-b from-white/[0.08] to-white/[0.04] backdrop-blur-md border-white/35 text-white shadow-sm ring-1 ring-white/10'
+                            : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
+                          }`}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-white/[0.04] backdrop-blur-sm border border-white/10 flex items-center justify-center shrink-0">
+                          <SportIcon sport={sportKey} className="w-4 h-4 text-slate-200" />
+                        </div>
+                        <span className="text-xs font-semibold capitalize truncate">
+                          {sportsData[sportKey].name}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Primary Role Selector */}
               {Object.keys(currentRoles).length > 0 && (
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 tracking-wider block mb-1.5">
-                    Tactical Role / Position
+                  <label className="text-xs font-medium text-slate-300 block mb-1.5">
+                    Playing Position
                   </label>
-                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-0.5">
-                    {Object.keys(currentRoles).map((roleKey) => (
-                      <button
-                        key={roleKey}
-                        type="button"
-                        onClick={() => handleRoleSelect(roleKey)}
-                        className={`p-2 rounded-xl border text-left transition-all ${
-                          profileData.primary_role === roleKey
-                            ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                            : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold font-tech capitalize truncate">
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(currentRoles).map((roleKey) => {
+                      const isSelected = profileData.primary_role === roleKey;
+                      return (
+                        <button
+                          key={roleKey}
+                          type="button"
+                          onClick={() => handleRoleSelect(roleKey)}
+                          className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-white/[0.08] backdrop-blur-md border-white/35 text-white shadow-sm ring-1 ring-white/10'
+                              : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <span className="text-xs font-semibold capitalize truncate">
                             {currentRoles[roleKey].title || roleKey.replace(/_/g, ' ')}
-                          </p>
-                          {profileData.primary_role === roleKey && (
-                            <CheckIcon className="w-3 h-3 text-emerald-400 shrink-0" />
+                          </span>
+                          {isSelected && (
+                            <CheckIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-1" />
                           )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {currentRoles[roleKey].description}
-                        </p>
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* Sub-Role Selector */}
+              {/* Sub-Role Selector as Custom Dropdown */}
               {Object.keys(currentSubRoles).length > 0 && (
-                <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 tracking-wider block mb-1.5">
-                    Specialist Sub-Role
+                <div className="relative">
+                  <label className="text-xs font-medium text-slate-300 block mb-1.5">
+                    Specialty / Tactical Focus
                   </label>
-                  <div className="grid grid-cols-1 gap-1.5 max-h-32 overflow-y-auto pr-0.5">
-                    {Object.keys(currentSubRoles).map((subKey) => (
-                      <button
-                        key={subKey}
-                        type="button"
-                        onClick={() =>
-                          setProfileData((prev) => ({ ...prev, sub_role: subKey }))
-                        }
-                        className={`p-2 rounded-xl border text-left transition-all ${
-                          profileData.sub_role === subKey
-                            ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                            : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold font-tech capitalize truncate">
-                            {currentSubRoles[subKey].title || subKey.replace(/_/g, ' ')}
-                          </span>
-                          {profileData.sub_role === subKey && (
-                            <CheckIcon className="w-3 h-3 text-emerald-400 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 truncate">
-                          {currentSubRoles[subKey].description}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSpecialtyOpen((prev) => !prev)}
+                    className="w-full h-11 px-3.5 rounded-xl bg-white/[0.03] backdrop-blur-md border border-white/[0.09] hover:border-white/25 text-left flex items-center justify-between transition-all focus:outline-none focus:border-white/40 focus:bg-white/[0.05]"
+                  >
+                    <span className="text-xs font-semibold text-white truncate">
+                      {currentSubRoles[profileData.sub_role]?.title ||
+                        profileData.sub_role?.replace(/_/g, ' ') ||
+                        'Select Specialty'}
+                    </span>
+                    <ChevronDownIcon
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${
+                        isSpecialtyOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {isSpecialtyOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setIsSpecialtyOpen(false)}
+                      />
+                      <div className="absolute left-0 right-0 top-full mt-1.5 z-30 p-1.5 rounded-xl bg-[#0B0D15]/95 backdrop-blur-2xl border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.85)] space-y-1">
+                        {Object.keys(currentSubRoles).map((subKey) => {
+                          const isSelected = profileData.sub_role === subKey;
+                          return (
+                            <button
+                              key={subKey}
+                              type="button"
+                              onClick={() => {
+                                setProfileData((prev) => ({ ...prev, sub_role: subKey }));
+                                setIsSpecialtyOpen(false);
+                              }}
+                              className={`w-full p-2.5 rounded-lg text-left text-xs font-semibold flex items-center justify-between transition-all ${
+                                isSelected
+                                  ? 'bg-white/[0.1] text-white'
+                                  : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
+                              }`}
+                            >
+                              <span className="truncate">
+                                {currentSubRoles[subKey].title || subKey.replace(/_/g, ' ')}
+                              </span>
+                              {isSelected && (
+                                <CheckIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-1" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="w-full h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+                className="w-full h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold mt-3 shadow-[0_4px_20px_rgba(255,255,255,0.12)]"
               >
-                <span>Next: Objectives</span>
-                <ArrowRightIcon className="w-3.5 h-3.5" />
+                <span>Continue: Objectives</span>
+                <ArrowRightIcon className="w-4 h-4 text-slate-950" />
               </button>
             </div>
           )}
 
-          {/* ── STEP 2: OBJECTIVES & GOALS ─────────────────────────────────────── */}
+          {/* ── STEP 2: OBJECTIVES ────────────────────────────────────────────── */}
           {!isSignIn && step === 2 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Focus Objectives
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
+                  What do you want to improve?
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Select your primary physical and biomechanical development goals.
+                  Select your primary physical and movement priorities.
                 </p>
               </div>
 
@@ -520,19 +526,18 @@ export default function Onboarding() {
                       key={objKey}
                       type="button"
                       onClick={() => toggleObjective(objKey)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        isSelected
-                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                          : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                      }`}
+                      className={`p-3 rounded-xl border text-left transition-all ${isSelected
+                          ? 'bg-gradient-to-b from-white/[0.08] to-white/[0.04] backdrop-blur-md border-white/35 text-white shadow-sm ring-1 ring-white/10'
+                          : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-bold font-tech capitalize">
+                        <span className="text-xs font-semibold capitalize">
                           {objectivesData[objKey].title || objKey.replace(/_/g, ' ')}
                         </span>
-                        {isSelected && <CheckIcon className="w-3.5 h-3.5 text-emerald-400" />}
+                        {isSelected && <CheckIcon className="w-4 h-4 text-emerald-400" />}
                       </div>
-                      <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
+                      <p className="text-[11px] text-slate-400 font-sans line-clamp-2">
                         {objectivesData[objKey].description}
                       </p>
                     </button>
@@ -551,30 +556,30 @@ export default function Onboarding() {
                 <button
                   type="button"
                   onClick={() => setStep(3)}
-                  className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+                  className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)]"
                 >
-                  <span>Next: Biometrics</span>
-                  <ArrowRightIcon className="w-3.5 h-3.5" />
+                  <span>Continue: Biometrics</span>
+                  <ArrowRightIcon className="w-4 h-4 text-slate-950" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── STEP 3: BIOMETRICS & TRAINING CONTEXT ──────────────────────────── */}
+          {/* ── STEP 3: BIOMETRICS & TIER ─────────────────────────────────────── */}
           {!isSignIn && step === 3 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
                   Physical Biometrics
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Calibrates baseline force ratios, workload endurance limits, and injury-risk models.
+                  Calibrates force metrics and workload limits.
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
                     Age
                   </label>
                   <input
@@ -589,7 +594,7 @@ export default function Onboarding() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
                     Height (cm)
                   </label>
                   <input
@@ -604,7 +609,7 @@ export default function Onboarding() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
                     Weight (kg)
                   </label>
                   <input
@@ -622,26 +627,28 @@ export default function Onboarding() {
 
               {/* Experience Level */}
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">
                   Competitive Tier
                 </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {['beginner', 'intermediate', 'advanced', 'elite'].map((lvl) => (
-                    <button
-                      key={lvl}
-                      type="button"
-                      onClick={() =>
-                        setProfileData({ ...profileData, experience_level: lvl })
-                      }
-                      className={`h-9 rounded-xl border text-[11px] font-bold capitalize flex items-center justify-center transition-all ${
-                        profileData.experience_level === lvl
-                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.2)]'
-                          : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                      }`}
-                    >
-                      {lvl.slice(0, 5)}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-4 gap-2">
+                  {['beginner', 'intermediate', 'advanced', 'elite'].map((lvl) => {
+                    const isSelected = profileData.experience_level === lvl;
+                    return (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() =>
+                          setProfileData({ ...profileData, experience_level: lvl })
+                        }
+                        className={`h-10 rounded-xl border text-xs font-medium capitalize flex items-center justify-center transition-all ${isSelected
+                            ? 'bg-white/[0.08] backdrop-blur-md border-white/35 text-white font-semibold ring-1 ring-white/10'
+                            : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
+                          }`}
+                      >
+                        {lvl}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -659,21 +666,20 @@ export default function Onboarding() {
                     type="button"
                     disabled={loading}
                     onClick={handleProfileSubmit}
-                    className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs ${
-                      loading ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                    className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)] ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                   >
                     <span>{loading ? 'Saving...' : 'Save Profile'}</span>
-                    {!loading && <ArrowRightIcon className="w-3.5 h-3.5" />}
+                    {!loading && <ArrowRightIcon className="w-4 h-4 text-slate-950" />}
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setStep(4)}
-                    className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+                    className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)]"
                   >
-                    <span>Next: Account</span>
-                    <ArrowRightIcon className="w-3.5 h-3.5" />
+                    <span>Continue: Account</span>
+                    <ArrowRightIcon className="w-4 h-4 text-slate-950" />
                   </button>
                 )}
               </div>
@@ -682,34 +688,34 @@ export default function Onboarding() {
 
           {/* ── STEP 4: ACCOUNT CREATION (SIGNUP ONLY) ───────────────────────── */}
           {!isSignIn && !isCompleteProfile && step === 4 && (
-            <form onSubmit={handleProfileSubmit} className="space-y-3.5">
+            <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
                   Create Athlete Account
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Your profile, movement assessments, and training pathways sync securely across devices.
+                  Your profile and assessments sync securely across all your devices.
                 </p>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                <label className="text-xs font-medium text-slate-300 block mb-1">
                   Full Name
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Cristiano Ronaldo"
+                  placeholder="e.g. Alex Morgan"
                   value={authData.full_name}
                   onChange={(e) =>
                     setAuthData({ ...authData, full_name: e.target.value })
                   }
-                  className="w-full h-11 px-3.5 sportify-input text-xs"
+                  className="w-full h-11 px-3.5 sportify-input text-xs font-sans"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                <label className="text-xs font-medium text-slate-300 block mb-1">
                   Email Address
                 </label>
                 <input
@@ -725,7 +731,7 @@ export default function Onboarding() {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                <label className="text-xs font-medium text-slate-300 block mb-1">
                   Password
                 </label>
                 <input
@@ -751,12 +757,11 @@ export default function Onboarding() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs ${
-                    loading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)] ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
-                  <span>{loading ? 'Creating...' : 'Launch Studio'}</span>
-                  {!loading && <ArrowRightIcon className="w-3.5 h-3.5" />}
+                  <span>{loading ? 'Creating Account...' : 'Complete Profile'}</span>
+                  {!loading && <ArrowRightIcon className="w-4 h-4 text-slate-950" />}
                 </button>
               </div>
             </form>
