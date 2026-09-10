@@ -23,7 +23,7 @@ export const useAthleteStore = create(
       // Training Plan
       currentPlan: null,
 
-      // Onboarding state
+      // Onboarding Wizard State
       onboardingStep: 0,
       onboardingData: {},
 

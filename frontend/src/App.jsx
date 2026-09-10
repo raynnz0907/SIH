@@ -1,6 +1,9 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAthleteStore } from './store/athleteStore';
+
+// Error Boundary & Hydration Gate
+import AppErrorBoundary from './components/common/AppErrorBoundary';
+import ProfileHydrationGate from './components/common/ProfileHydrationGate';
 
 // Error Boundary & Hydration Gate
 import AppErrorBoundary from './components/common/AppErrorBoundary';
