@@ -1,0 +1,246 @@
+import numpy as np
+from typing import Dict, List, Optional, Any
+from .base import MovementProtocol, MovementAnalysisResult, MetricObservation
+
+
+class FootballStrikeAnalyzer(MovementProtocol):
+    """
+    Biomechanical Analyzer for Football / Soccer Shooting and Kicking Mechanics.
+    Evaluates plant-leg knee stability, striking hip extension/whip, torso posture,
+    and single-leg deceleration balance.
+    """
+
+    protocol_id = "football_strike"
+    name = "Football Strike & Kicking Mechanics Assessment"
+    # Shoulders (11, 12), Hips (23, 24), Knees (25, 26), Ankles (27, 28)
+    required_landmarks = [11, 12, 23, 24, 25, 26, 27, 28]
+    min_usable_frames = 20
+
+    def analyze(
+        self,
+        landmarks_sequence: List[Dict[int, List[float]]],
+        fps: float = 30.0,
+        athlete_context: Optional[Dict[str, Any]] = None,
+    ) -> MovementAnalysisResult:
+        if len(landmarks_sequence) < self.min_usable_frames:
+            return MovementAnalysisResult(
+                protocol_id=self.protocol_id,
+                protocol_name=self.name,
+                status="failed",
+                is_valid=False,
+                observations=["Insufficient frames to complete football striking analysis."],
+            )
+
+        left_ankle_vels = []
+        right_ankle_vels = []
+        left_knee_angles = []
+        right_knee_angles = []
+        torso_angles = []
+
+        for i, frame in enumerate(landmarks_sequence):
+            ls = frame[11]
+            rs = frame[12]
+            lh = frame[23]
+            rh = frame[24]
+            lk = frame[25]
+            rk = frame[26]
+            la = frame[27]
+            ra = frame[28]
+
+            # Knee angles
+            lk_ang = self.calculate_angle_2d(lh, lk, la)
+            rk_ang = self.calculate_angle_2d(rh, rk, ra)
+            left_knee_angles.append(lk_ang)
+            right_knee_angles.append(rk_ang)
+
+            # Torso lean relative to vertical (mid-shoulder to mid-hip)
+            mid_s = [(ls[0] + rs[0]) / 2.0, (ls[1] + rs[1]) / 2.0]
+            mid_h = [(lh[0] + rh[0]) / 2.0, (lh[1] + rh[1]) / 2.0]
+            dx = mid_s[0] - mid_h[0]
+            dy = mid_s[1] - mid_h[1]
+            torso_lean_deg = abs(float(np.degrees(np.arctan2(dx, -dy)))) if abs(dy) > 1e-5 else 0.0
+            torso_angles.append(torso_lean_deg)
+
+            # Ankle velocities (frame-to-frame displacement)
+            if i > 0:
+                prev_la = landmarks_sequence[i - 1][27]
+                prev_ra = landmarks_sequence[i - 1][28]
+                l_disp = np.sqrt((la[0] - prev_la[0]) ** 2 + (la[1] - prev_la[1]) ** 2)
+                r_disp = np.sqrt((ra[0] - prev_ra[0]) ** 2 + (ra[1] - prev_ra[1]) ** 2)
+                left_ankle_vels.append(l_disp * fps)
+                right_ankle_vels.append(r_disp * fps)
+            else:
+                left_ankle_vels.append(0.0)
+                right_ankle_vels.append(0.0)
+
+        left_max_v = max(left_ankle_vels)
+        right_max_v = max(right_ankle_vels)
+
+        # Strike foot is the one with highest peak swing velocity
+        right_footed = right_max_v >= left_max_v
+        strike_vels = right_ankle_vels if right_footed else left_ankle_vels
+        plant_knee_angles = left_knee_angles if right_footed else right_knee_angles
+        strike_knee_angles = right_knee_angles if right_footed else left_knee_angles
+
+        impact_idx = int(np.argmax(strike_vels))
+        peak_velocity = strike_vels[impact_idx]
+
+        # Validation: Verify a dynamic strike motion took place
+        if peak_velocity < 0.30:
+            return MovementAnalysisResult(
+                protocol_id=self.protocol_id,
+                protocol_name=self.name,
+                status="failed",
+                is_valid=False,
+                observations=[
+                    "Football strike motion could not be validated: insufficient kicking leg acceleration. "
+                    "Ensure athlete performs an unobstructed kicking/striking action."
+                ],
+                error_details={"error_code": "STRIKE_NOT_DETECTED"},
+            )
+
+        # 1. Plant Foot Knee Stability Score (Knee flexion angle at plant 130 - 155 deg)
+        plant_knee_at_impact = plant_knee_angles[impact_idx]
+        if 130.0 <= plant_knee_at_impact <= 155.0:
+            plant_score = 92.0
+            plant_interp = f"Optimal plant knee flexion ({plant_knee_at_impact:.1f}°) providing stable base and joint protection."
+        elif 120.0 <= plant_knee_at_impact < 130.0:
+            plant_score = 75.0
+            plant_interp = f"Moderate plant knee compression ({plant_knee_at_impact:.1f}°). Strengthen quadriceps and decelerators."
+        elif plant_knee_at_impact > 165.0:
+            plant_score = 55.0
+            plant_interp = f"Plant knee hyperextended or locked ({plant_knee_at_impact:.1f}°), risking joint shear and reducing strike power."
+        else:
+            plant_score = 65.0
+            plant_interp = f"Suboptimal plant knee angle ({plant_knee_at_impact:.1f}°)."
+
+        # 2. Explosive Capacity / Strike Whip Velocity
+        if peak_velocity >= 0.85:
+            explosive_score = min(98.0, 85.0 + (peak_velocity - 0.85) * 20.0)
+            explosive_interp = "Exceptional kinetic transfer and rapid foot speed through ball impact."
+        elif peak_velocity >= 0.55:
+            explosive_score = 70.0 + ((peak_velocity - 0.55) / 0.30) * 15.0
+            explosive_interp = "Standard striking foot velocity; potential for greater hip rotational drive."
+        else:
+            explosive_score = 55.0
+            explosive_interp = "Low strike acceleration. Focus on hip flexor velocity and kinetic chain timing."
+
+        # 3. Upper Body Posture / Torso Lean Control (Ideal lean: 5 - 20 deg over the ball)
+        impact_torso_lean = torso_angles[impact_idx]
+        if 5.0 <= impact_torso_lean <= 20.0:
+            posture_score = 90.0
+            posture_interp = f"Excellent forward-over-ball trunk control ({impact_torso_lean:.1f}° lean)."
+        elif impact_torso_lean < 5.0:
+            posture_score = 75.0
+            posture_interp = f"Upright torso ({impact_torso_lean:.1f}°). Risk of sending ball over target."
+        elif impact_torso_lean <= 30.0:
+            posture_score = 70.0
+            posture_interp = f"Slight excessive lean ({impact_torso_lean:.1f}°). Maintain core stiffness."
+        else:
+            posture_score = 52.0
+            posture_interp = f"Severe torso collapse ({impact_torso_lean:.1f}°). Core stability required."
+
+        # 4. Hip Mobility / Strike Leg Extension Range
+        min_strike_knee = min(strike_knee_angles[:impact_idx+1]) if impact_idx > 0 else strike_knee_angles[0]
+        flexion_range = max(strike_knee_angles) - min_strike_knee
+        if flexion_range >= 70.0:
+            hip_mobility_score = 88.0
+            hip_interp = f"Broad hip-knee dynamic excursion ({flexion_range:.1f}° range) enabling full elastic whip."
+        elif flexion_range >= 50.0:
+            hip_mobility_score = 74.0
+            hip_interp = f"Moderate dynamic range ({flexion_range:.1f}°). Target posterior chain mobility."
+        else:
+            hip_mobility_score = 58.0
+            hip_interp = f"Constrained striking leg swing arc ({flexion_range:.1f}°). Hip mobility deficit."
+
+        # 5. Balance / Post-Strike Deceleration
+        post_frames = landmarks_sequence[impact_idx:min(len(landmarks_sequence), impact_idx + 15)]
+        if len(post_frames) >= 5:
+            post_drifts = [abs(f[23][0] - landmarks_sequence[impact_idx][23][0]) for f in post_frames]
+            avg_drift = float(np.mean(post_drifts))
+            balance_score = max(50.0, min(95.0, 95.0 - avg_drift * 300.0))
+            balance_interp = "Solid single-leg deceleration balance following follow-through." if balance_score >= 75 else "Excessive lateral instability post-strike."
+        else:
+            balance_score = 75.0
+            balance_interp = "Standard recovery balance maintained."
+
+        # Overall Quality Aggregate
+        overall_quality = round(
+            float(
+                plant_score * 0.25
+                + explosive_score * 0.30
+                + posture_score * 0.20
+                + hip_mobility_score * 0.15
+                + balance_score * 0.10
+            ),
+            1,
+        )
+
+        metrics = {
+            "knee_stability": round(plant_score, 1),
+            "explosive_capacity": round(explosive_score, 1),
+            "upper_body_posture": round(posture_score, 1),
+            "hip_mobility": round(hip_mobility_score, 1),
+            "balance": round(balance_score, 1),
+        }
+
+        metric_details = {
+            "knee_stability": MetricObservation(
+                name="Plant Knee Stability",
+                score=round(plant_score, 1),
+                raw_value=round(plant_knee_at_impact, 1),
+                unit="deg",
+                interpretation=plant_interp,
+            ),
+            "explosive_capacity": MetricObservation(
+                name="Strike Whip Velocity",
+                score=round(explosive_score, 1),
+                raw_value=round(peak_velocity, 2),
+                unit="speed",
+                interpretation=explosive_interp,
+            ),
+            "upper_body_posture": MetricObservation(
+                name="Trunk Over Ball Posture",
+                score=round(posture_score, 1),
+                raw_value=round(impact_torso_lean, 1),
+                unit="deg",
+                interpretation=posture_interp,
+            ),
+            "hip_mobility": MetricObservation(
+                name="Dynamic Swing Arc",
+                score=round(hip_mobility_score, 1),
+                raw_value=round(flexion_range, 1),
+                unit="deg",
+                interpretation=hip_interp,
+            ),
+            "balance": MetricObservation(
+                name="Post-Strike Deceleration",
+                score=round(balance_score, 1),
+                interpretation=balance_interp,
+            ),
+        }
+
+        foot_side_str = "Right" if right_footed else "Left"
+        observations = [
+            f"{foot_side_str}-Footed Strike analyzed at {fps:.0f} FPS across dynamic execution phases.",
+            plant_interp,
+            explosive_interp,
+            posture_interp,
+            hip_interp,
+        ]
+
+        return MovementAnalysisResult(
+            protocol_id=self.protocol_id,
+            protocol_name=self.name,
+            status="completed",
+            is_valid=True,
+            overall_movement_quality=overall_quality,
+            metrics=metrics,
+            metric_details=metric_details,
+            phase_breakdown={
+                "impact_frame": impact_idx,
+                "strike_foot": foot_side_str,
+                "peak_velocity": round(peak_velocity, 2),
+            },
+            observations=observations,
+        )

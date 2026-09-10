@@ -2,14 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAthleteStore } from '../store/athleteStore';
 import { planAPI } from '../api/client';
 import {
-  ShieldIcon,
-  HeartPulseIcon,
   CheckIcon,
   ClockIcon,
-  SparklesIcon,
-  ZapIcon,
   TargetIcon,
-  FlameIcon,
 } from '../components/common/Icons';
 
 export default function RecoveryPlan() {
@@ -33,10 +28,10 @@ export default function RecoveryPlan() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 select-none">
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 select-none">
         <div className="w-8 h-8 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
         <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">
-          Calculating Load Strain & Recovery Protocols...
+          Loading Recovery State...
         </p>
       </div>
     );
@@ -50,155 +45,194 @@ export default function RecoveryPlan() {
   const injuryPrehab = recoveryData?.injury_prevention_focus;
 
   return (
-    <div className="space-y-3.5 select-none">
-      {/* ── TOP HERO BANNER ─────────────────────────────────────────────────── */}
-      <div className="sportify-card p-4 relative overflow-hidden">
-        <div className="relative z-10 space-y-2.5">
+    <div className="space-y-4 select-none pb-8">
+      {/* ── 1. CURRENT RECOVERY STATE WITH SUPPORTING DATA ───────────────────── */}
+      <section className="rounded-2xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-md border border-white/[0.08] p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold font-tech text-emerald-400 tracking-widest uppercase px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/25">
-              Recovery Center
+            <span className="text-[11px] font-sans font-medium text-slate-300 px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/10">
+              Recovery Status
             </span>
-            <span className="text-[10px] font-mono text-slate-400 uppercase">
-              {loadContext.strain_status || 'Optimal Adaptation'}
+            <span
+              className={`text-xs font-semibold font-sans px-2.5 py-0.5 rounded-full border ${
+                isHighStrain
+                  ? 'text-rose-400 bg-rose-500/10 border-rose-500/30'
+                  : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+              }`}
+            >
+              {loadContext.strain_status || 'Optimal'}
             </span>
           </div>
 
           <div>
-            <h1 className="text-base font-extrabold font-heading tracking-tight uppercase text-white">
-              Strain Diagnostics & Restoration
+            <h1 className="text-xl sm:text-2xl font-extrabold font-heading text-white tracking-tight">
+              Readiness & Recovery
             </h1>
-            <p className="text-[11px] text-slate-400 font-sans leading-relaxed mt-0.5">
-              Recovery protocols calculated from your recent session volume and average RPE.
+            <p className="text-xs text-slate-400 font-sans mt-0.5">
+              Restoration protocols based on recent session volume and RPE.
             </p>
           </div>
 
-          <div
-            className={`p-2.5 rounded-xl border text-center ${
-              isHighStrain
-                ? 'bg-rose-500/10 border-rose-500/30'
-                : 'bg-emerald-500/10 border-emerald-500/30'
-            }`}
-          >
-            <div className="text-[9px] font-tech uppercase tracking-wider text-slate-400">
-              Current Load State
+          {/* Supporting Evidence Strip */}
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.06]">
+            <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm">
+              <span className="text-[10px] text-slate-400 font-sans block mb-0.5">
+                Status
+              </span>
+              <p
+                className={`text-sm font-bold font-sans ${
+                  isHighStrain ? 'text-rose-400' : 'text-emerald-400'
+                }`}
+              >
+                {loadContext.strain_status || 'Optimal'}
+              </p>
             </div>
-            <div
-              className={`text-base font-bold font-mono ${
-                isHighStrain ? 'text-rose-400' : 'text-emerald-400'
-              }`}
-            >
-              {loadContext.strain_status || 'Optimal'}
+
+            <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm">
+              <span className="text-[10px] text-slate-400 font-sans block mb-0.5">
+                Avg RPE
+              </span>
+              <p className="text-sm font-bold font-mono text-white">
+                {loadContext.avg_recent_rpe ? loadContext.avg_recent_rpe.toFixed(1) : '6.0'}
+                <span className="text-[10px] font-normal text-slate-400 ml-0.5">/10</span>
+              </p>
             </div>
-            <div className="text-[10px] font-mono text-slate-400">
-              Avg RPE: {loadContext.avg_recent_rpe?.toFixed(1) || 6.0} • {loadContext.total_weekly_minutes || 240} Mins
+
+            <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm">
+              <span className="text-[10px] text-slate-400 font-sans block mb-0.5">
+                Weekly Volume
+              </span>
+              <p className="text-sm font-bold font-mono text-white">
+                {loadContext.total_weekly_minutes || 240}
+                <span className="text-[10px] font-normal text-slate-400 ml-0.5">mins</span>
+              </p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── DAILY RESTORATION HABITS & INJURY PREHAB ───────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      {/* ── 2. DAILY HABITS & INJURY PREHAB ─────────────────────────────────── */}
+      <div className="space-y-3.5">
         {/* Daily Habits */}
-        <div className="sportify-card p-4 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold font-heading tracking-wide uppercase text-white">
-              Daily Restoration Habits
-            </h3>
-            <span className="text-[9px] font-mono text-slate-400">
-              {habits.length} Habits
+        <section className="rounded-2xl bg-[#0C0E14]/80 backdrop-blur-md border border-white/[0.08] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-lg">
+          <div className="flex items-center justify-between pb-1 border-b border-white/[0.06]">
+            <h2 className="text-sm font-bold font-heading text-white">
+              Daily Habits
+            </h2>
+            <span className="text-[11px] font-mono text-slate-400">
+              {habits.length} daily
             </span>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {habits.map((habit, idx) => (
               <div
                 key={idx}
-                className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.06] flex items-start gap-2 text-[11px] text-slate-200"
+                className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm flex items-start gap-2.5 text-xs text-slate-200"
               >
-                <CheckIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                <span className="leading-snug font-sans">{habit}</span>
+                <CheckIcon className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span className="font-sans leading-relaxed">{habit}</span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Injury Prehab Card */}
-        <div className="sportify-card p-4 space-y-2">
+        {/* Injury Prehab Focus */}
+        <section className="rounded-2xl bg-[#0C0E14]/80 backdrop-blur-md border border-white/[0.08] p-4 sm:p-5 space-y-2.5 hover:border-white/15 transition-all shadow-lg">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold font-tech text-amber-400 uppercase tracking-widest">
+            <span className="text-[11px] font-sans font-medium text-slate-400">
               Prehab Focus
             </span>
-            <TargetIcon className="w-3.5 h-3.5 text-amber-400" />
+            <TargetIcon className="w-4 h-4 text-slate-400" />
           </div>
-          <h3 className="text-xs font-bold font-heading tracking-wide uppercase text-white">
-            Joint Activation & Defense
-          </h3>
-          <p className="text-[11px] text-slate-400 leading-relaxed font-sans">
-            {injuryPrehab ||
-              'Complete 5 minutes of targeted stabilization and dynamic mobilization before high-intensity sessions.'}
-          </p>
-        </div>
+          <h2 className="text-sm font-bold font-heading text-white">
+            Joint Activation & Prehab
+          </h2>
+          <div className="border-l-2 border-white/20 pl-3 py-1">
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              {injuryPrehab ||
+                '5 minutes of targeted stabilization and mobility before high-intensity sessions.'}
+            </p>
+          </div>
+        </section>
       </div>
 
-      {/* ── ACTIVE RECOVERY SESSIONS ───────────────────────────────────────── */}
-      <div className="space-y-2">
-        <h2 className="text-xs font-bold font-heading tracking-wider uppercase text-white">
-          Active Recovery Protocols
-        </h2>
+      {/* ── 3. ACTIVE RECOVERY SESSIONS ─────────────────────────────────────── */}
+      <section className="space-y-2.5">
+        <div className="px-0.5">
+          <h2 className="text-sm font-bold font-heading text-white">
+            Active Recovery Sessions
+          </h2>
+          <p className="text-[11px] text-slate-400 font-sans">
+            Tissue recovery and mobility protocols.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <div className="space-y-3.5">
           {activeSessions.map((session, idx) => (
-            <div key={idx} className="sportify-card p-3.5 space-y-2">
+            <div
+              key={idx}
+              className="rounded-2xl bg-[#0C0E14]/80 backdrop-blur-md border border-white/[0.08] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-lg"
+            >
               <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
-                <h4 className="text-xs font-bold text-white font-heading">
+                <h3 className="text-sm font-bold text-white font-heading">
                   {session.name}
-                </h4>
-                <span className="text-xs font-mono text-slate-200 px-2.5 py-1 rounded-lg bg-white/[0.06] border border-white/15">
-                  {session.duration_minutes} Mins
+                </h3>
+                <span className="text-xs font-mono text-slate-300 px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/10">
+                  {session.duration_minutes} mins
                 </span>
               </div>
 
-              <div className="space-y-2">
+              <div className="divide-y divide-white/[0.05] rounded-xl bg-white/[0.015] border border-white/[0.04] px-3.5 py-0.5">
                 {session.exercises?.map((ex, exIdx) => (
                   <div
                     key={exIdx}
-                    className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04] text-xs text-slate-300 font-sans"
+                    className="py-2 text-xs text-slate-300 font-sans"
                   >
                     • {ex}
                   </div>
                 ))}
               </div>
 
-              <div className="text-[11px] text-slate-400 font-mono pt-1">
-                Timing: {session.when}
-              </div>
+              {session.when && (
+                <div className="text-[11px] text-slate-400 font-sans pt-0.5 flex items-center gap-1.5">
+                  <ClockIcon className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span>Schedule: {session.when}</span>
+                </div>
+              )}
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* ── WEEKLY SCHEDULE ────────────────────────────────────────────────── */}
-      <div className="sportify-card p-4 space-y-2">
-        <h3 className="text-xs font-bold font-heading tracking-wide uppercase text-white">
-          Weekly Recovery Schedule
-        </h3>
+      {/* ── 4. WEEKLY RECOVERY TIMELINE ─────────────────────────────────────── */}
+      <section className="rounded-2xl bg-[#0C0E14]/80 backdrop-blur-md border border-white/[0.08] p-4 sm:p-5 space-y-3 hover:border-white/15 transition-all shadow-lg">
+        <div className="flex items-center justify-between pb-1 border-b border-white/[0.06]">
+          <h2 className="text-sm font-bold font-heading text-white">
+            Weekly Recovery Schedule
+          </h2>
+          <span className="text-[11px] font-sans text-slate-400">
+            Weekly Overview
+          </span>
+        </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
           {Object.keys(schedule).map((dayKey) => (
             <div
               key={dayKey}
-              className="p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06]"
+              className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm space-y-1"
             >
-              <span className="text-[9px] font-bold font-tech text-slate-400 uppercase tracking-widest block mb-0.5">
+              <span className="text-[10px] font-sans font-semibold text-slate-400 uppercase tracking-wider block">
                 {dayKey.replace(/_/g, ' ')}
               </span>
-              <p className="text-[11px] text-slate-300 leading-snug font-sans truncate">
+              <p className="text-xs text-slate-200 font-sans leading-snug">
                 {schedule[dayKey]}
               </p>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
+

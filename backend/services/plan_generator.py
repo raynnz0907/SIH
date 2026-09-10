@@ -1,142 +1,214 @@
 import json
 import re
-from config import settings
+from typing import Dict, List, Optional, Any
+
+from .exercise_service import exercise_service
+from .taxonomy_service import taxonomy_service
 
 
 class PlanGenerator:
     """
-    Generates structured 4-week training and recovery plans using Google Gemini Flash,
-    with a comprehensive built-in fallback.
+    Evidence-Grounded Training and Recovery Pathway Generator.
+    Uses ExerciseService as the ground-truth catalog for exercise prescription,
+    and grounds Gemini LLM in structured assessment findings and athlete profile constraints.
     """
 
     def __init__(self):
-        self.model = settings.GEMINI_MODEL
+        self.exercises = exercise_service
+        self.taxonomy = taxonomy_service
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    def generate_plan(
+        self,
+        athlete_profile: Dict[str, Any],
+        bottlenecks: List[Dict[str, Any]],
+        strengths: Optional[List[Dict[str, Any]]] = None,
+        development_areas: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate a structured 4-week training pathway targeting the athlete's specific priorities.
+        """
+        sport = athlete_profile.get("sport", "cricket")
+        role = athlete_profile.get("primary_role") or athlete_profile.get("role", "batsman")
+        sub_role = athlete_profile.get("sub_role")
+        exp = athlete_profile.get("experience_level", "intermediate")
+        days_per_week = min(max(int(athlete_profile.get("training_days_per_week", 4)), 2), 6)
+        session_mins = int(athlete_profile.get("session_duration_minutes", 60))
+        goals = athlete_profile.get("development_objectives") or athlete_profile.get("goals") or []
 
-    def generate_plan(self, athlete_profile: dict, bottlenecks: list) -> dict:
-        """Generate a 4-week structured training plan via Gemini Flash."""
-        prompt = self.build_prompt(athlete_profile, bottlenecks)
+        # 1. Determine Primary Development Focuses
+        primary_bottlenecks = [b for b in bottlenecks if b.get("attribute")]
+        if not primary_bottlenecks and development_areas:
+            primary_bottlenecks = development_areas
+        if not primary_bottlenecks:
+            # Athlete is proficient/strong across baseline; focus on role-specific progression
+            role_weights = self.taxonomy.get_attribute_weights(sport, role, sub_role=sub_role, goals=goals)
+            top_attr = max(role_weights, key=role_weights.get) if role_weights else "explosive_capacity"
+            primary_bottlenecks = [{"attribute": top_attr, "name": top_attr.replace("_", " ").title(), "gap": 0}]
 
-        if settings.GEMINI_API_KEY:
-            try:
-                from google import genai
-
-                client = genai.Client(api_key=settings.GEMINI_API_KEY)
-                system_instruction = (
-                    "You are an elite sports performance coach. "
-                    "You ONLY respond with valid JSON — no markdown, no explanation, no code fences. "
-                    "Your JSON must exactly match the schema requested."
-                )
-                full_prompt = f"{system_instruction}\n\n{prompt}"
-
-                response = client.models.generate_content(
-                    model=self.model,
-                    contents=full_prompt,
-                )
-                raw = response.text.strip()
-                # Strip any accidental markdown fences
-                raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
-                raw = re.sub(r"```$", "", raw, flags=re.MULTILINE).strip()
-                # Find the outermost JSON object
-                match = re.search(r"\{.*\}", raw, re.DOTALL)
-                if match:
-                    plan = json.loads(match.group())
-                    plan["_source"] = f"gemini:{self.model}"
-                    return plan
-            except Exception as e:
-                print(f"[PlanGenerator] Gemini generation failed: {e}")
-
-        return self._fallback_plan(athlete_profile, bottlenecks)
-
-    def generate_recovery_plan(self, athlete_profile: dict, bottlenecks: list) -> dict:
-        """Generate a complementary recovery protocol."""
-        sport = athlete_profile.get("sport", "sport")
-        role = athlete_profile.get("role", "athlete")
-        top_bottleneck = (
-            bottlenecks[0]["attribute"].replace("_", " ")
-            if bottlenecks
-            else "general conditioning"
+        # 2. Build Base 4-Week Catalog Prescription (Ground Truth)
+        base_weeks = self._build_deterministic_pathway(
+            athlete_profile=athlete_profile,
+            primary_bottlenecks=primary_bottlenecks,
+            days_per_week=days_per_week,
+            session_mins=session_mins,
+            exp=exp,
         )
+
+        # 3. Attempt LLM Grounded Synthesis (Adds coaching rationales & cues to the catalog plan)
+        llm_enhanced_plan = self._attempt_llm_synthesis(
+            athlete_profile=athlete_profile,
+            bottlenecks=primary_bottlenecks,
+            strengths=strengths or [],
+            base_weeks=base_weeks,
+        )
+
+        if llm_enhanced_plan:
+            return llm_enhanced_plan
+
+        # 4. Fallback to Grounded Catalog Plan
+        top_focus = primary_bottlenecks[0].get("name") or primary_bottlenecks[0].get("attribute", "").replace("_", " ").title()
+        role_title = role.replace("_", " ").title()
         return {
-            "daily_habits": [
-                "Sleep 8–9 hours per night — consistent sleep/wake times are critical",
-                "Hydrate: 35 ml per kg bodyweight + 500 ml extra per hour of training",
-                "Post-session nutrition: 20–40 g protein + 1 g/kg carbohydrate within 30 minutes",
-            ],
-            "active_recovery_sessions": [
-                {
-                    "name": "Foam Rolling Circuit",
-                    "duration_minutes": 15,
-                    "exercises": ["Quad roll", "IT band roll", "Thoracic spine roll", "Calf roll", "Glute roll"],
-                    "when": "Every evening before bed",
-                },
-                {
-                    "name": "Mobility Flow",
-                    "duration_minutes": 20,
-                    "exercises": ["90/90 hip stretch (2 min each side)", "World's greatest stretch", "Cat-cow", "Deep squat hold", "Pigeon pose"],
-                    "when": "On rest days or as morning routine",
-                },
-            ],
-            "weekly_recovery_schedule": {
-                "day_1": "Light 10-min walk + full foam rolling circuit",
-                "day_2": "Active recovery: 20-min low-intensity swim or cycle",
-                "day_3": "Mobility flow + breathing exercises",
-                "day_4": "Full rest or gentle yoga",
-            },
-            "injury_prevention_focus": (
-                f"Given your {top_bottleneck} deficit, prioritise targeted prehab "
-                f"for that movement pattern every session."
-            ),
-            "load_management_tip": (
-                f"As a {role} in {sport}, if perceived exertion averages above 7/10 "
-                f"for 3+ consecutive days, insert an extra rest day."
-            ),
+            "_source": "catalog_grounded",
+            "plan_title": f"4-Week {sport.title()} {role_title} Development Pathway",
+            "plan_summary": f"Targeted progressive overload focusing on {top_focus}.",
+            "primary_focus_attributes": [b.get("attribute") for b in primary_bottlenecks[:3]],
+            "weeks": base_weeks,
+            "recovery_protocol": self.generate_recovery_plan(athlete_profile, primary_bottlenecks),
         }
 
-    # ------------------------------------------------------------------
-    # Prompt building
-    # ------------------------------------------------------------------
+    def _build_deterministic_pathway(
+        self,
+        athlete_profile: Dict[str, Any],
+        primary_bottlenecks: List[Dict[str, Any]],
+        days_per_week: int,
+        session_mins: int,
+        exp: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Assembles 4 progressive weeks using real exercise records from ExerciseService.
+        """
+        top_attr = primary_bottlenecks[0].get("attribute", "explosive_capacity")
 
-    def build_prompt(self, athlete_profile: dict, bottlenecks: list) -> str:
-        sport = athlete_profile.get("sport", "sport")
-        role = athlete_profile.get("role", "athlete")
-        training_days = athlete_profile.get("training_days_per_week", 4)
-        session_mins = athlete_profile.get("session_duration_minutes", 60)
-        experience = athlete_profile.get("experience_level", "intermediate")
-        goals = athlete_profile.get("goals", [])
-        age = athlete_profile.get("age", "unknown")
+        # Session distribution mapped to primary bottleneck
+        session_types_map = {
+            "explosive_capacity": ["Plyometric", "Speed", "Strength", "Agility", "Speed", "Recovery"],
+            "knee_stability": ["Strength", "Mobility", "Strength", "Agility", "Strength", "Recovery"],
+            "hip_mobility": ["Mobility", "Strength", "Mobility", "Agility", "Strength", "Recovery"],
+            "upper_body_posture": ["Strength", "Mobility", "Strength", "Speed", "Strength", "Recovery"],
+            "movement_symmetry": ["Strength", "Agility", "Plyometric", "Strength", "Speed", "Recovery"],
+            "balance": ["Strength", "Agility", "Mobility", "Plyometric", "Strength", "Recovery"],
+        }
+        session_types = session_types_map.get(
+            top_attr, ["Strength", "Speed", "Agility", "Plyometric", "Strength", "Recovery"]
+        )
 
-        bottleneck_text = "\n".join([
-            f"  {i+1}. {b.get('attribute', 'metric').replace('_', ' ').title()} — "
-            f"Score: {float(b.get('score', 70)):.0f}/100, Benchmark: {float(b.get('benchmark', 80)):.0f}/100, "
-            f"Gap: {float(b.get('gap', 10)):.0f} pts. {b.get('role_relevance_explanation', '')}"
-            for i, b in enumerate(bottlenecks[:5])
-        ]) or "  - No severe kinematic bottlenecks detected. Focus on foundational power and movement symmetry."
-        goals_text = ", ".join(goals) if goals else "general athletic improvement"
+        week_themes = [
+            "Phase 1: Movement Quality & Foundational Mechanics",
+            "Phase 2: Load Accumulation & Dynamic Control",
+            "Phase 3: Rate of Force Development & Peak Output",
+            "Phase 4: Consolidation, Sport Integration & Reassessment",
+        ]
 
-        return f"""Generate a 4-week training plan as JSON for this athlete:
+        weeks = []
+        for week_num in range(1, 5):
+            sessions = []
+            for day_idx in range(days_per_week):
+                s_type = session_types[day_idx % len(session_types)]
+                session_data = self.exercises.build_session_exercises(
+                    session_type=s_type,
+                    primary_bottlenecks=primary_bottlenecks,
+                    experience_level=exp,
+                    session_duration_minutes=session_mins,
+                    athlete_context=athlete_profile,
+                )
 
-Sport: {sport} | Role: {role} | Experience: {experience} | Age: {age}
-Training days/week: {training_days} | Session duration: {session_mins} minutes
-Goals: {goals_text}
+                # Progressive intensity scaling across 4 weeks
+                exercises = []
+                for ex in session_data["main_exercises"]:
+                    ex_copy = dict(ex)
+                    if week_num == 1:
+                        ex_copy["intensity_level"] = "Medium"
+                    elif week_num == 2:
+                        ex_copy["intensity_level"] = "Medium-High"
+                    elif week_num == 3:
+                        ex_copy["intensity_level"] = "High"
+                        ex_copy["sets"] = ex_copy.get("sets", 3) + (1 if exp == "advanced" else 0)
+                    elif week_num == 4:
+                        ex_copy["intensity_level"] = "Max Precision"
+                    exercises.append(ex_copy)
 
-Top development bottlenecks:
-{bottleneck_text}
+                sessions.append(
+                    {
+                        "day": day_idx + 1,
+                        "session_name": f"{s_type} Focus — Week {week_num}",
+                        "type": s_type,
+                        "duration_minutes": session_mins,
+                        "rationale": f"Targets {top_attr.replace('_', ' ')} progression through {s_type.lower()} stimulus.",
+                        "warmup": session_data["warmup"],
+                        "main_exercises": exercises,
+                        "cooldown": session_data["cooldown"],
+                        "recovery_notes": f"Week {week_num} session. Log RPE and recovery status post-workout.",
+                    }
+                )
 
-Rules:
-- {training_days} training sessions per week, rest on remaining days
-- Sessions progress in intensity each week (Week 1 foundation → Week 4 peak)
-- 60%+ of exercises must target the top 2-3 bottlenecks
-- Include role-specific {sport} {role} exercises
-- Each exercise needs: name, sets, reps, intensity_level (Low/Medium/High/Max), rest_seconds, coaching_cue, targets_bottleneck
+            weeks.append(
+                {
+                    "week_number": week_num,
+                    "week_theme": week_themes[week_num - 1],
+                    "sessions": sessions,
+                }
+            )
 
-Return ONLY this JSON structure (no markdown, no text outside JSON):
+        return weeks
+
+    def _attempt_llm_synthesis(
+        self,
+        athlete_profile: Dict[str, Any],
+        bottlenecks: List[Dict[str, Any]],
+        strengths: List[Dict[str, Any]],
+        base_weeks: List[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Calls Ollama to enhance plan summary and coaching cues without inventing exercises.
+        """
+        sport = athlete_profile.get("sport", "cricket")
+        role = athlete_profile.get("primary_role") or athlete_profile.get("role", "batsman")
+        exp = athlete_profile.get("experience_level", "intermediate")
+        goals = athlete_profile.get("development_objectives") or athlete_profile.get("goals") or []
+
+        bottleneck_lines = [
+            f"  - {b.get('name', b.get('attribute'))}: Score {b.get('score')}/100 (Benchmark: {b.get('benchmark')}). {b.get('role_relevance_explanation', '')}"
+            for b in bottlenecks[:3]
+        ]
+        strength_lines = [
+            f"  - {s.get('name', s.get('attribute'))}: Score {s.get('score')}/100 (Above benchmark)"
+            for s in strengths[:3]
+        ]
+
+        prompt = f"""You are a world-class athletic performance director. Synthesize a 4-week coaching pathway using ONLY the structured athlete profile and catalog plan below:
+
+Athlete Profile:
+Sport: {sport.title()} | Role: {role.replace('_', ' ').title()} | Level: {exp.title()}
+Goals: {', '.join(goals) if goals else 'Role Performance Optimization'}
+
+Verified Development Priorities (Bottlenecks):
+{chr(10).join(bottleneck_lines) or '  - General Athletic Progression'}
+
+Key Strengths (Preserve & Reinforce):
+{chr(10).join(strength_lines) or '  - Movement baseline stable'}
+
+Ground-Truth Catalog Plan Structure:
+- 4 weeks, {len(base_weeks[0]['sessions'])} sessions per week.
+
+Strict Rules:
+- Do NOT invent ungrounded exercises; preserve the catalog exercise names.
+- Do NOT prescribe corrective work for identified Key Strengths.
+- Return ONLY valid JSON:
 {{
   "plan_title": "string",
-  "plan_summary": "2-3 sentence summary",
+  "plan_summary": "3-sentence clear summary of development pathway",
+  "primary_focus_attributes": ["{bottlenecks[0].get('attribute', 'explosive_capacity') if bottlenecks else 'general'}"],
   "weeks": [
     {{
       "week_number": 1,
@@ -146,155 +218,128 @@ Return ONLY this JSON structure (no markdown, no text outside JSON):
           "day": 1,
           "session_name": "string",
           "type": "Strength|Speed|Agility|Mobility|Plyometric|Recovery",
-          "duration_minutes": {session_mins},
-          "warmup": ["item1", "item2"],
+          "duration_minutes": {athlete_profile.get('session_duration_minutes', 60)},
+          "rationale": "specific connection to {role} in {sport}",
+          "warmup": ["warmup 1", "warmup 2"],
           "main_exercises": [
             {{
-              "name": "string",
+              "name": "{base_weeks[0]['sessions'][0]['main_exercises'][0]['name']}",
               "sets": 3,
               "reps": "8-10",
               "intensity_level": "Medium",
               "rest_seconds": 90,
-              "coaching_cue": "string",
-              "targets_bottleneck": "knee_stability"
+              "coaching_cue": "specific biomechanical cue",
+              "targets_bottleneck": "{bottlenecks[0].get('attribute', 'knee_stability') if bottlenecks else 'general'}"
             }}
           ],
-          "cooldown": ["item1", "item2"],
+          "cooldown": ["cooldown 1", "cooldown 2"],
           "recovery_notes": "string"
         }}
       ]
     }}
-  ],
-  "recovery_protocol": {{
-    "daily_habits": ["habit1", "habit2"],
-    "weekly_recovery_session": "string"
-  }}
+  ]
 }}"""
 
-    # ------------------------------------------------------------------
-    # Built-in fallback plan (no LLM needed)
-    # ------------------------------------------------------------------
+        try:
+            from .gemini_service import gemini_service
+            plan = gemini_service.generate_json(
+                prompt=prompt,
+                system_instruction=(
+                    "You are an elite sports coach. Respond ONLY with valid JSON. "
+                    "Never invent unobserved flaws or ungrounded exercises."
+                ),
+                temperature=0.2,
+            )
+            if plan and "weeks" in plan and len(plan["weeks"]) >= 1:
+                # Ensure full 4 weeks are present (if LLM truncated, merge with catalog base)
+                if len(plan["weeks"]) < 4:
+                    plan["weeks"] = base_weeks
+                plan["_source"] = "gemini"
+                plan["recovery_protocol"] = self.generate_recovery_plan(athlete_profile, bottlenecks)
+                return plan
+        except Exception:
+            pass
 
-    def _fallback_plan(self, athlete_profile: dict, bottlenecks: list) -> dict:
-        sport = athlete_profile.get("sport", "sport")
-        role = athlete_profile.get("role", "athlete")
-        training_days = min(athlete_profile.get("training_days_per_week", 4), 6)
-        session_mins = athlete_profile.get("session_duration_minutes", 60)
-        top_attr = bottlenecks[0]["attribute"] if bottlenecks else "explosive_capacity"
+        return None
 
-        session_type_map = {
-            "explosive_capacity":  ["Plyometric", "Speed", "Strength", "Agility", "Speed", "Strength"],
-            "knee_stability":      ["Strength", "Mobility", "Strength", "Agility", "Strength", "Recovery"],
-            "hip_mobility":        ["Mobility", "Strength", "Mobility", "Agility", "Strength", "Recovery"],
-            "upper_body_posture":  ["Strength", "Mobility", "Strength", "Speed", "Strength", "Recovery"],
-            "movement_symmetry":   ["Strength", "Agility", "Plyometric", "Strength", "Speed", "Recovery"],
-            "flexibility":         ["Mobility", "Strength", "Mobility", "Agility", "Strength", "Recovery"],
-            "balance":             ["Strength", "Agility", "Mobility", "Plyometric", "Strength", "Recovery"],
-        }
-        session_types = session_type_map.get(top_attr, ["Strength", "Speed", "Agility", "Strength", "Plyometric", "Recovery"])
-        week_themes = ["Foundation & Movement Quality", "Load Accumulation", "Intensity Peak", "Consolidation & Reassessment"]
+    def generate_recovery_plan(
+        self,
+        athlete_profile: Dict[str, Any],
+        bottlenecks: Optional[List[Dict[str, Any]]] = None,
+        recent_sessions_load: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generates dynamic recovery protocols connected to the athlete's actual training load and context.
+        """
+        sport = athlete_profile.get("sport", "cricket")
+        role = athlete_profile.get("primary_role") or athlete_profile.get("role", "athlete")
+        top_focus = (
+            bottlenecks[0].get("attribute", "").replace("_", " ")
+            if bottlenecks
+            else "general conditioning"
+        )
 
-        templates = {
-            "Strength": {
-                "warmup": ["5 min light jog", "Leg swings x15 each", "Hip circles x10", "Glute bridges x15"],
-                "exercises": [
-                    {"name": "Goblet Squat", "sets": 3, "reps": "10-12", "intensity_level": "Medium", "rest_seconds": 90, "coaching_cue": "Chest up, knees track toes, full depth", "targets_bottleneck": "knee_stability"},
-                    {"name": "Romanian Deadlift", "sets": 3, "reps": "8-10", "intensity_level": "Medium", "rest_seconds": 90, "coaching_cue": "Hip hinge, flat back, feel hamstring stretch", "targets_bottleneck": "hip_mobility"},
-                    {"name": "Bulgarian Split Squat", "sets": 3, "reps": "8 each", "intensity_level": "Medium", "rest_seconds": 90, "coaching_cue": "Front knee stable, drive through heel", "targets_bottleneck": "movement_symmetry"},
-                    {"name": "Plank Hold", "sets": 3, "reps": "40 sec", "intensity_level": "Low", "rest_seconds": 60, "coaching_cue": "Neutral spine, squeeze glutes and abs", "targets_bottleneck": "upper_body_posture"},
-                ],
-                "cooldown": ["Standing quad stretch 30s each", "Pigeon pose 60s each", "Thoracic rotations x10"],
-            },
-            "Speed": {
-                "warmup": ["A-skips x20m x3", "High knees x20m x3", "Bounding x20m x2", "Strides x60m x2"],
-                "exercises": [
-                    {"name": "10m Acceleration Sprint", "sets": 6, "reps": "1", "intensity_level": "Max", "rest_seconds": 120, "coaching_cue": "Drive angle forward, pump arms, push not pull", "targets_bottleneck": "explosive_capacity"},
-                    {"name": "30m Flying Sprint", "sets": 4, "reps": "1", "intensity_level": "Max", "rest_seconds": 180, "coaching_cue": "Tall posture, relaxed shoulders, high knee drive", "targets_bottleneck": "explosive_capacity"},
-                    {"name": "Resisted Band Sprint", "sets": 4, "reps": "20m", "intensity_level": "High", "rest_seconds": 120, "coaching_cue": "Lean into resistance, drive each step hard", "targets_bottleneck": "explosive_capacity"},
-                ],
-                "cooldown": ["Easy jog 5 min", "Hip flexor stretch 60s each", "Calf stretch 30s each"],
-            },
-            "Agility": {
-                "warmup": ["Lateral shuffles x10m x4", "Carioca x15m x3", "Hip openers x10 each", "Reactive jumps x10"],
-                "exercises": [
-                    {"name": "5-10-5 Pro Agility", "sets": 5, "reps": "1", "intensity_level": "High", "rest_seconds": 90, "coaching_cue": "Low hips at cut, plant outside foot, explode direction", "targets_bottleneck": "movement_symmetry"},
-                    {"name": "T-Drill", "sets": 4, "reps": "1", "intensity_level": "High", "rest_seconds": 90, "coaching_cue": "Stay low, touch each cone cleanly", "targets_bottleneck": "balance"},
-                    {"name": "Ladder Icky Shuffle", "sets": 4, "reps": "2 lengths", "intensity_level": "Medium", "rest_seconds": 60, "coaching_cue": "Soft foot contact, eyes forward, arms help rhythm", "targets_bottleneck": "movement_symmetry"},
-                ],
-                "cooldown": ["Light jog 5 min", "Ankle circles", "Hip flexor stretch", "Hamstring sweep"],
-            },
-            "Mobility": {
-                "warmup": ["5 min walk", "Arm circles x15", "Leg swings x15 each"],
-                "exercises": [
-                    {"name": "World's Greatest Stretch", "sets": 3, "reps": "5 each side", "intensity_level": "Low", "rest_seconds": 30, "coaching_cue": "Lunge, rotate thorax, reach sky, hold 2s", "targets_bottleneck": "hip_mobility"},
-                    {"name": "90/90 Hip Stretch", "sets": 3, "reps": "90 sec each", "intensity_level": "Low", "rest_seconds": 30, "coaching_cue": "Sit tall, hinge from hip, breathe into restriction", "targets_bottleneck": "hip_mobility"},
-                    {"name": "Deep Squat Hold", "sets": 3, "reps": "60 sec", "intensity_level": "Low", "rest_seconds": 30, "coaching_cue": "Heels down, chest up, knees out", "targets_bottleneck": "flexibility"},
-                    {"name": "Thoracic Extension Foam Roller", "sets": 3, "reps": "8 reps", "intensity_level": "Low", "rest_seconds": 30, "coaching_cue": "Roller at mid-back, arms crossed, exhale into extension", "targets_bottleneck": "upper_body_posture"},
-                ],
-                "cooldown": ["Box breathing 5 min", "Progressive muscle relaxation"],
-            },
-            "Plyometric": {
-                "warmup": ["Jump rope 3 min", "Broad jumps x5", "Squat jumps x5", "Bounding x20m x2"],
-                "exercises": [
-                    {"name": "Box Jump", "sets": 4, "reps": "5", "intensity_level": "High", "rest_seconds": 120, "coaching_cue": "Swing arms, land soft bent knees, step down", "targets_bottleneck": "explosive_capacity"},
-                    {"name": "Depth Drop to Jump", "sets": 4, "reps": "5", "intensity_level": "High", "rest_seconds": 120, "coaching_cue": "Step off box, land and immediately explode — minimise ground contact", "targets_bottleneck": "explosive_capacity"},
-                    {"name": "Lateral Bound", "sets": 4, "reps": "8 each", "intensity_level": "High", "rest_seconds": 90, "coaching_cue": "Single-leg takeoff, land stable, hold 1s", "targets_bottleneck": "balance"},
-                    {"name": "Hurdle Hop", "sets": 3, "reps": "6", "intensity_level": "High", "rest_seconds": 90, "coaching_cue": "Stiff ankle, minimal ground time", "targets_bottleneck": "explosive_capacity"},
-                ],
-                "cooldown": ["Easy walk 5 min", "Quad stretch 30s each", "Calf stretch 60s each"],
-            },
-            "Recovery": {
-                "warmup": ["5 min gentle walk"],
-                "exercises": [
-                    {"name": "Full Body Foam Rolling", "sets": 1, "reps": "15 min", "intensity_level": "Low", "rest_seconds": 0, "coaching_cue": "Slow rolls, pause on tender spots 20-30s", "targets_bottleneck": "general"},
-                    {"name": "Yoga Flow", "sets": 3, "reps": "5 rounds", "intensity_level": "Low", "rest_seconds": 30, "coaching_cue": "Breathe with each movement, don't force range", "targets_bottleneck": "flexibility"},
-                    {"name": "Single-Leg Balance Hold", "sets": 2, "reps": "60 sec each", "intensity_level": "Low", "rest_seconds": 30, "coaching_cue": "Eyes closed for progression, soft knee, tall spine", "targets_bottleneck": "balance"},
-                ],
-                "cooldown": ["10 min guided breathing", "Light stretching"],
-            },
-        }
+        # Evaluate recent training context if available
+        avg_rpe = recent_sessions_load.get("avg_rpe", 6.0) if recent_sessions_load else 6.0
+        total_minutes = recent_sessions_load.get("total_minutes_week", 240) if recent_sessions_load else 240
+        is_high_load = avg_rpe >= 7.5 or total_minutes >= 300
 
-        weeks = []
-        for week_num in range(1, 5):
-            sessions = []
-            for day_offset in range(training_days):
-                s_type = session_types[day_offset % len(session_types)]
-                tmpl = templates.get(s_type, templates["Strength"])
-                exercises = []
-                for ex in tmpl["exercises"]:
-                    scaled = dict(ex)
-                    if week_num >= 3 and scaled["intensity_level"] == "Medium":
-                        scaled["intensity_level"] = "High"
-                    exercises.append(scaled)
-                sessions.append({
-                    "day": day_offset + 1,
-                    "session_name": f"{s_type} — Week {week_num}",
-                    "type": s_type,
-                    "duration_minutes": session_mins,
-                    "warmup": tmpl["warmup"],
-                    "main_exercises": exercises,
-                    "cooldown": tmpl["cooldown"],
-                    "recovery_notes": f"Week {week_num} {s_type.lower()} block. Log your RPE after this session.",
-                })
-            weeks.append({"week_number": week_num, "week_theme": week_themes[week_num - 1], "sessions": sessions})
+        habits = [
+            "Sleep 8–9 hours per night with consistent sleep/wake times for CNS restoration.",
+            f"Hydrate: 35 ml/kg bodyweight daily + 500 ml per training session for {sport.title()}.",
+            "Post-workout window: 25–35g high-quality protein + complex carbohydrates within 45 min.",
+        ]
 
-        top_label = bottlenecks[0]["attribute"].replace("_", " ").title() if bottlenecks else "General Fitness"
+        if is_high_load:
+            habits.insert(
+                0,
+                "⚠️ High training strain detected (Average RPE ≥ 7.5) — prioritize active recovery and +30 min extra sleep.",
+            )
+
+        active_recovery = [
+            {
+                "name": "Targeted Soft Tissue Release",
+                "duration_minutes": 15,
+                "exercises": [
+                    "Thoracic spine roller extension (2 min)",
+                    "Hamstring and glute foam rolling (2 min each side)",
+                    "IT band and quad release (2 min each side)",
+                    "Calf and Achilles soft rolling (2 min each side)",
+                ],
+                "when": "Post-session or evening before bed",
+            },
+            {
+                "name": f"Dynamic Mobility Flow ({top_focus.title()} Focus)",
+                "duration_minutes": 20,
+                "exercises": [
+                    "90/90 hip stretch with forward hinge (90s each side)",
+                    "World's greatest stretch with thoracic reach (5 reps each side)",
+                    "Deep goblet squat hold with breath expansion (60s hold)",
+                    "Cat-cow with spinal segmentation (10 cycles)",
+                ],
+                "when": "On scheduled recovery / rest days",
+            },
+        ]
+
         return {
-            "_source": "fallback",
-            "plan_title": f"4-Week {sport.title()} {role.replace('_', ' ').title()} Development Plan",
-            "plan_summary": (
-                f"This plan targets your top development gap — {top_label} — "
-                f"through progressive {training_days}-day/week cycles. "
-                f"Sessions escalate in intensity across 4 weeks, tailored to the demands "
-                f"of a {role.replace('_', ' ')} in {sport}."
-            ),
-            "weeks": weeks,
-            "recovery_protocol": {
-                "daily_habits": [
-                    "Sleep 8–9 hours with consistent wake time",
-                    "Hydrate: 35 ml/kg bodyweight daily + extra during training",
-                    "Post-training: 30g protein + 60g carbohydrate within 30 minutes",
-                ],
-                "weekly_recovery_session": "1 dedicated Recovery session per week (foam rolling, yoga, breathing).",
+            "load_context": {
+                "avg_recent_rpe": avg_rpe,
+                "total_weekly_minutes": total_minutes,
+                "strain_status": "High Strain" if is_high_load else "Optimal Adaptation",
             },
+            "daily_habits": habits,
+            "active_recovery_sessions": active_recovery,
+            "weekly_recovery_schedule": {
+                "day_1": "Post-workout 10-min soft tissue flush + hydration",
+                "day_2": "Active recovery: 20-min low-intensity bike or swim (Zone 1)",
+                "day_3": f"Mobility flow targeting {top_focus} restrictions",
+                "day_4": "Full nervous system rest + contrast therapy or gentle yoga",
+            },
+            "injury_prevention_focus": (
+                f"Given your priority in {top_focus}, complete 5 minutes of targeted activation "
+                f"and prehab before every high-intensity {role.replace('_', ' ')} session."
+            ),
         }
+
+
+plan_generator = PlanGenerator()

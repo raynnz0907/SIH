@@ -1,0 +1,714 @@
+{
+  "cricket": {
+    "batsman": {
+      "opening_batsman": {
+        "beginner": {
+          "balance": 60,
+          "upper_body_posture": 60,
+          "knee_stability": 58,
+          "movement_symmetry": 55,
+          "explosive_capacity": 50,
+          "hip_mobility": 52
+        },
+        "intermediate": {
+          "balance": 74,
+          "upper_body_posture": 74,
+          "knee_stability": 72,
+          "movement_symmetry": 70,
+          "explosive_capacity": 65,
+          "hip_mobility": 68
+        },
+        "advanced": {
+          "balance": 86,
+          "upper_body_posture": 86,
+          "knee_stability": 84,
+          "movement_symmetry": 82,
+          "explosive_capacity": 78,
+          "hip_mobility": 80
+        },
+        "elite": {
+          "balance": 92,
+          "upper_body_posture": 92,
+          "knee_stability": 90,
+          "movement_symmetry": 88,
+          "explosive_capacity": 85,
+          "hip_mobility": 88
+        }
+      },
+      "middle_order_batsman": {
+        "beginner": {
+          "hip_mobility": 58,
+          "balance": 58,
+          "knee_stability": 56,
+          "explosive_capacity": 54,
+          "upper_body_posture": 56,
+          "movement_symmetry": 54
+        },
+        "intermediate": {
+          "hip_mobility": 72,
+          "balance": 72,
+          "knee_stability": 70,
+          "explosive_capacity": 68,
+          "upper_body_posture": 70,
+          "movement_symmetry": 68
+        },
+        "advanced": {
+          "hip_mobility": 85,
+          "balance": 84,
+          "knee_stability": 82,
+          "explosive_capacity": 80,
+          "upper_body_posture": 82,
+          "movement_symmetry": 80
+        },
+        "elite": {
+          "hip_mobility": 92,
+          "balance": 90,
+          "knee_stability": 88,
+          "explosive_capacity": 88,
+          "upper_body_posture": 88,
+          "movement_symmetry": 86
+        }
+      },
+      "finisher": {
+        "beginner": {
+          "explosive_capacity": 62,
+          "hip_mobility": 56,
+          "balance": 55,
+          "knee_stability": 55,
+          "upper_body_posture": 52
+        },
+        "intermediate": {
+          "explosive_capacity": 76,
+          "hip_mobility": 70,
+          "balance": 68,
+          "knee_stability": 68,
+          "upper_body_posture": 66
+        },
+        "advanced": {
+          "explosive_capacity": 88,
+          "hip_mobility": 84,
+          "balance": 80,
+          "knee_stability": 80,
+          "upper_body_posture": 78
+        },
+        "elite": {
+          "explosive_capacity": 94,
+          "hip_mobility": 90,
+          "balance": 86,
+          "knee_stability": 86,
+          "upper_body_posture": 84
+        }
+      }
+    },
+    "bowler": {
+      "fast_bowler": {
+        "beginner": {
+          "knee_stability": 60,
+          "explosive_capacity": 60,
+          "upper_body_posture": 55,
+          "hip_mobility": 55,
+          "movement_symmetry": 52
+        },
+        "intermediate": {
+          "knee_stability": 75,
+          "explosive_capacity": 75,
+          "upper_body_posture": 70,
+          "hip_mobility": 68,
+          "movement_symmetry": 66
+        },
+        "advanced": {
+          "knee_stability": 88,
+          "explosive_capacity": 88,
+          "upper_body_posture": 82,
+          "hip_mobility": 80,
+          "movement_symmetry": 78
+        },
+        "elite": {
+          "knee_stability": 94,
+          "explosive_capacity": 94,
+          "upper_body_posture": 90,
+          "hip_mobility": 88,
+          "movement_symmetry": 85
+        }
+      },
+      "spin_bowler": {
+        "beginner": {
+          "balance": 62,
+          "hip_mobility": 58,
+          "upper_body_posture": 58,
+          "knee_stability": 54,
+          "explosive_capacity": 48
+        },
+        "intermediate": {
+          "balance": 76,
+          "hip_mobility": 72,
+          "upper_body_posture": 72,
+          "knee_stability": 68,
+          "explosive_capacity": 62
+        },
+        "advanced": {
+          "balance": 88,
+          "hip_mobility": 85,
+          "upper_body_posture": 84,
+          "knee_stability": 80,
+          "explosive_capacity": 74
+        },
+        "elite": {
+          "balance": 94,
+          "hip_mobility": 92,
+          "upper_body_posture": 90,
+          "knee_stability": 86,
+          "explosive_capacity": 80
+        }
+      }
+    },
+    "all_rounder": {
+      "batting_all_rounder": {
+        "beginner": {
+          "balance": 58,
+          "knee_stability": 58,
+          "hip_mobility": 56,
+          "explosive_capacity": 55,
+          "upper_body_posture": 55
+        },
+        "intermediate": {
+          "balance": 72,
+          "knee_stability": 72,
+          "hip_mobility": 70,
+          "explosive_capacity": 70,
+          "upper_body_posture": 68
+        },
+        "advanced": {
+          "balance": 85,
+          "knee_stability": 84,
+          "hip_mobility": 82,
+          "explosive_capacity": 82,
+          "upper_body_posture": 80
+        },
+        "elite": {
+          "balance": 90,
+          "knee_stability": 90,
+          "hip_mobility": 88,
+          "explosive_capacity": 88,
+          "upper_body_posture": 86
+        }
+      },
+      "bowling_all_rounder": {
+        "beginner": {
+          "knee_stability": 60,
+          "explosive_capacity": 60,
+          "hip_mobility": 55,
+          "balance": 55,
+          "upper_body_posture": 54
+        },
+        "intermediate": {
+          "knee_stability": 74,
+          "explosive_capacity": 74,
+          "hip_mobility": 68,
+          "balance": 68,
+          "upper_body_posture": 68
+        },
+        "advanced": {
+          "knee_stability": 86,
+          "explosive_capacity": 86,
+          "hip_mobility": 80,
+          "balance": 80,
+          "upper_body_posture": 80
+        },
+        "elite": {
+          "knee_stability": 92,
+          "explosive_capacity": 92,
+          "hip_mobility": 88,
+          "balance": 86,
+          "upper_body_posture": 86
+        }
+      }
+    },
+    "wicket_keeper": {
+      "wicketkeeper_batsman": {
+        "beginner": {
+          "hip_mobility": 62,
+          "knee_stability": 60,
+          "balance": 60,
+          "explosive_capacity": 54,
+          "upper_body_posture": 56
+        },
+        "intermediate": {
+          "hip_mobility": 76,
+          "knee_stability": 74,
+          "balance": 74,
+          "explosive_capacity": 68,
+          "upper_body_posture": 70
+        },
+        "advanced": {
+          "hip_mobility": 88,
+          "knee_stability": 86,
+          "balance": 86,
+          "explosive_capacity": 82,
+          "upper_body_posture": 82
+        },
+        "elite": {
+          "hip_mobility": 94,
+          "knee_stability": 92,
+          "balance": 92,
+          "explosive_capacity": 88,
+          "upper_body_posture": 88
+        }
+      }
+    }
+  },
+  "football": {
+    "striker": {
+      "center_forward": {
+        "beginner": {
+          "explosive_capacity": 55,
+          "hip_mobility": 55,
+          "knee_stability": 55,
+          "balance": 55,
+          "movement_symmetry": 55
+        },
+        "intermediate": {
+          "explosive_capacity": 72,
+          "hip_mobility": 70,
+          "knee_stability": 68,
+          "balance": 66,
+          "movement_symmetry": 68
+        },
+        "advanced": {
+          "explosive_capacity": 88,
+          "hip_mobility": 85,
+          "knee_stability": 80,
+          "balance": 80,
+          "movement_symmetry": 82
+        },
+        "elite": {
+          "explosive_capacity": 94,
+          "hip_mobility": 90,
+          "knee_stability": 86,
+          "balance": 86,
+          "movement_symmetry": 88
+        }
+      }
+    },
+    "winger": {
+      "traditional_winger": {
+        "beginner": {
+          "explosive_capacity": 60,
+          "movement_symmetry": 55,
+          "hip_mobility": 58,
+          "knee_stability": 55,
+          "balance": 54
+        },
+        "intermediate": {
+          "explosive_capacity": 76,
+          "movement_symmetry": 70,
+          "hip_mobility": 72,
+          "knee_stability": 68,
+          "balance": 67
+        },
+        "advanced": {
+          "explosive_capacity": 90,
+          "movement_symmetry": 84,
+          "hip_mobility": 87,
+          "knee_stability": 80,
+          "balance": 80
+        },
+        "elite": {
+          "explosive_capacity": 95,
+          "movement_symmetry": 90,
+          "hip_mobility": 92,
+          "knee_stability": 86,
+          "balance": 85
+        }
+      }
+    },
+    "central_midfielder": {
+      "box_to_box": {
+        "beginner": {
+          "knee_stability": 58,
+          "hip_mobility": 55,
+          "balance": 58,
+          "upper_body_posture": 58,
+          "movement_symmetry": 60
+        },
+        "intermediate": {
+          "knee_stability": 72,
+          "hip_mobility": 68,
+          "balance": 70,
+          "upper_body_posture": 72,
+          "movement_symmetry": 73
+        },
+        "advanced": {
+          "knee_stability": 84,
+          "hip_mobility": 80,
+          "balance": 83,
+          "upper_body_posture": 85,
+          "movement_symmetry": 85
+        },
+        "elite": {
+          "knee_stability": 90,
+          "hip_mobility": 88,
+          "balance": 88,
+          "upper_body_posture": 90,
+          "movement_symmetry": 90
+        }
+      }
+    },
+    "centre_back": {
+      "central_defender": {
+        "beginner": {
+          "upper_body_posture": 62,
+          "knee_stability": 60,
+          "balance": 60,
+          "explosive_capacity": 54,
+          "movement_symmetry": 58
+        },
+        "intermediate": {
+          "upper_body_posture": 76,
+          "knee_stability": 74,
+          "balance": 74,
+          "explosive_capacity": 67,
+          "movement_symmetry": 70
+        },
+        "advanced": {
+          "upper_body_posture": 88,
+          "knee_stability": 86,
+          "balance": 85,
+          "explosive_capacity": 80,
+          "movement_symmetry": 82
+        },
+        "elite": {
+          "upper_body_posture": 92,
+          "knee_stability": 92,
+          "balance": 90,
+          "explosive_capacity": 86,
+          "movement_symmetry": 88
+        }
+      }
+    },
+    "goalkeeper": {
+      "shot_stopper": {
+        "beginner": {
+          "explosive_capacity": 58,
+          "hip_mobility": 60,
+          "balance": 62,
+          "upper_body_posture": 60,
+          "knee_stability": 55
+        },
+        "intermediate": {
+          "explosive_capacity": 72,
+          "hip_mobility": 74,
+          "balance": 76,
+          "upper_body_posture": 73,
+          "knee_stability": 68
+        },
+        "advanced": {
+          "explosive_capacity": 85,
+          "hip_mobility": 86,
+          "balance": 88,
+          "upper_body_posture": 85,
+          "knee_stability": 80
+        },
+        "elite": {
+          "explosive_capacity": 92,
+          "hip_mobility": 92,
+          "balance": 94,
+          "upper_body_posture": 90,
+          "knee_stability": 86
+        }
+      }
+    }
+  },
+  "basketball": {
+    "point_guard": {
+      "playmaker_pg": {
+        "beginner": {
+          "explosive_capacity": 60,
+          "movement_symmetry": 60,
+          "balance": 60,
+          "knee_stability": 58,
+          "hip_mobility": 55
+        },
+        "intermediate": {
+          "explosive_capacity": 75,
+          "movement_symmetry": 74,
+          "balance": 73,
+          "knee_stability": 72,
+          "hip_mobility": 68
+        },
+        "advanced": {
+          "explosive_capacity": 88,
+          "movement_symmetry": 86,
+          "balance": 85,
+          "knee_stability": 85,
+          "hip_mobility": 80
+        },
+        "elite": {
+          "explosive_capacity": 94,
+          "movement_symmetry": 92,
+          "balance": 90,
+          "knee_stability": 90,
+          "hip_mobility": 86
+        }
+      }
+    },
+    "shooting_guard": {
+      "perimeter_scorer": {
+        "beginner": {
+          "explosive_capacity": 58,
+          "balance": 62,
+          "upper_body_posture": 60,
+          "movement_symmetry": 58,
+          "knee_stability": 56
+        },
+        "intermediate": {
+          "explosive_capacity": 72,
+          "balance": 75,
+          "upper_body_posture": 73,
+          "movement_symmetry": 72,
+          "knee_stability": 70
+        },
+        "advanced": {
+          "explosive_capacity": 84,
+          "balance": 86,
+          "upper_body_posture": 85,
+          "movement_symmetry": 84,
+          "knee_stability": 82
+        },
+        "elite": {
+          "explosive_capacity": 92,
+          "balance": 92,
+          "upper_body_posture": 90,
+          "movement_symmetry": 90,
+          "knee_stability": 88
+        }
+      }
+    },
+    "small_forward": {
+      "wing_slasher": {
+        "beginner": {
+          "explosive_capacity": 60,
+          "hip_mobility": 56,
+          "movement_symmetry": 58,
+          "balance": 58,
+          "upper_body_posture": 56
+        },
+        "intermediate": {
+          "explosive_capacity": 74,
+          "hip_mobility": 70,
+          "movement_symmetry": 72,
+          "balance": 72,
+          "upper_body_posture": 70
+        },
+        "advanced": {
+          "explosive_capacity": 86,
+          "hip_mobility": 82,
+          "movement_symmetry": 84,
+          "balance": 83,
+          "upper_body_posture": 82
+        },
+        "elite": {
+          "explosive_capacity": 92,
+          "hip_mobility": 88,
+          "movement_symmetry": 90,
+          "balance": 88,
+          "upper_body_posture": 88
+        }
+      }
+    },
+    "power_forward": {
+      "post_rebounder": {
+        "beginner": {
+          "knee_stability": 62,
+          "explosive_capacity": 56,
+          "balance": 60,
+          "upper_body_posture": 60,
+          "hip_mobility": 54
+        },
+        "intermediate": {
+          "knee_stability": 76,
+          "explosive_capacity": 70,
+          "balance": 73,
+          "upper_body_posture": 73,
+          "hip_mobility": 67
+        },
+        "advanced": {
+          "knee_stability": 88,
+          "explosive_capacity": 82,
+          "balance": 84,
+          "upper_body_posture": 85,
+          "hip_mobility": 79
+        },
+        "elite": {
+          "knee_stability": 92,
+          "explosive_capacity": 88,
+          "balance": 90,
+          "upper_body_posture": 90,
+          "hip_mobility": 85
+        }
+      }
+    },
+    "center": {
+      "rim_anchor": {
+        "beginner": {
+          "knee_stability": 65,
+          "upper_body_posture": 62,
+          "balance": 62,
+          "explosive_capacity": 54,
+          "hip_mobility": 52
+        },
+        "intermediate": {
+          "knee_stability": 78,
+          "upper_body_posture": 75,
+          "balance": 75,
+          "explosive_capacity": 67,
+          "hip_mobility": 65
+        },
+        "advanced": {
+          "knee_stability": 90,
+          "upper_body_posture": 87,
+          "balance": 86,
+          "explosive_capacity": 80,
+          "hip_mobility": 77
+        },
+        "elite": {
+          "knee_stability": 94,
+          "upper_body_posture": 92,
+          "balance": 90,
+          "explosive_capacity": 86,
+          "hip_mobility": 82
+        }
+      }
+    }
+  },
+  "athletics": {
+    "sprinter": {
+      "short_sprint": {
+        "beginner": {
+          "explosive_capacity": 65,
+          "movement_symmetry": 62,
+          "hip_mobility": 60,
+          "knee_stability": 58,
+          "balance": 58
+        },
+        "intermediate": {
+          "explosive_capacity": 80,
+          "movement_symmetry": 76,
+          "hip_mobility": 75,
+          "knee_stability": 72,
+          "balance": 72
+        },
+        "advanced": {
+          "explosive_capacity": 92,
+          "movement_symmetry": 88,
+          "hip_mobility": 87,
+          "knee_stability": 84,
+          "balance": 84
+        },
+        "elite": {
+          "explosive_capacity": 98,
+          "movement_symmetry": 94,
+          "hip_mobility": 92,
+          "knee_stability": 90,
+          "balance": 88
+        }
+      }
+    },
+    "middle_distance": {
+      "middle_track": {
+        "beginner": {
+          "knee_stability": 62,
+          "movement_symmetry": 64,
+          "hip_mobility": 58,
+          "balance": 60,
+          "upper_body_posture": 60
+        },
+        "intermediate": {
+          "knee_stability": 76,
+          "movement_symmetry": 78,
+          "hip_mobility": 72,
+          "balance": 73,
+          "upper_body_posture": 73
+        },
+        "advanced": {
+          "knee_stability": 87,
+          "movement_symmetry": 88,
+          "hip_mobility": 84,
+          "balance": 85,
+          "upper_body_posture": 85
+        },
+        "elite": {
+          "knee_stability": 94,
+          "movement_symmetry": 94,
+          "hip_mobility": 90,
+          "balance": 90,
+          "upper_body_posture": 90
+        }
+      }
+    },
+    "jumper": {
+      "long_high_jump": {
+        "beginner": {
+          "explosive_capacity": 65,
+          "balance": 62,
+          "hip_mobility": 62,
+          "knee_stability": 60,
+          "upper_body_posture": 57
+        },
+        "intermediate": {
+          "explosive_capacity": 80,
+          "balance": 76,
+          "hip_mobility": 76,
+          "knee_stability": 73,
+          "upper_body_posture": 70
+        },
+        "advanced": {
+          "explosive_capacity": 92,
+          "balance": 87,
+          "hip_mobility": 88,
+          "knee_stability": 85,
+          "upper_body_posture": 82
+        },
+        "elite": {
+          "explosive_capacity": 97,
+          "balance": 92,
+          "hip_mobility": 92,
+          "knee_stability": 90,
+          "upper_body_posture": 88
+        }
+      }
+    },
+    "thrower": {
+      "rotational_throw": {
+        "beginner": {
+          "upper_body_posture": 62,
+          "explosive_capacity": 60,
+          "hip_mobility": 62,
+          "balance": 60,
+          "movement_symmetry": 56
+        },
+        "intermediate": {
+          "upper_body_posture": 76,
+          "explosive_capacity": 74,
+          "hip_mobility": 76,
+          "balance": 74,
+          "movement_symmetry": 70
+        },
+        "advanced": {
+          "upper_body_posture": 88,
+          "explosive_capacity": 86,
+          "hip_mobility": 88,
+          "balance": 85,
+          "movement_symmetry": 82
+        },
+        "elite": {
+          "upper_body_posture": 94,
+          "explosive_capacity": 92,
+          "hip_mobility": 92,
+          "balance": 90,
+          "movement_symmetry": 88
+        }
+      }
+    }
+  }
+}

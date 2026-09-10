@@ -1,47 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAthleteStore } from '../store/athleteStore';
-import { intakeAPI, formatErrorMessage } from '../api/client';
+import { authAPI, intakeAPI } from '../api/client';
 import SportifyLogo from '../components/common/SportifyLogo';
 import { normalizeSport } from '../config/sportAssessmentConfig';
 import {
-  CricketIcon,
-  FootballIcon,
-  BasketballIcon,
-  AthleticsIcon,
-  CheckIcon,
   ArrowRightIcon,
-  SlidersIcon,
-  TargetIcon,
-  DumbbellIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  SportIcon,
 } from '../components/common/Icons';
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode = searchParams.get('mode') || 'signup'; // 'signup' | 'signin' | 'complete-profile'
 
+  const login = useAthleteStore((state) => state.login);
   const setProfile = useAthleteStore((state) => state.setProfile);
-  const storedProfile = useAthleteStore((state) => state.profile);
+  const athlete = useAthleteStore((state) => state.athlete);
+
+  const isSignIn = mode === 'signin';
+  const isCompleteProfile = mode === 'complete-profile';
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isSpecialtyOpen, setIsSpecialtyOpen] = useState(false);
 
   // Taxonomy & Objectives from backend
   const [sportsData, setSportsData] = useState({});
-  const [objectivesData, setObjectivesData] = useState([]);
+  const [objectivesData, setObjectivesData] = useState({});
+
+  // Form State
+  const [authData, setAuthData] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+  });
 
   const [profileData, setProfileData] = useState({
-    sport: storedProfile?.sport || 'cricket',
-    discipline: storedProfile?.discipline || '',
-    primary_role: storedProfile?.primary_role || 'batsman',
-    sub_role: storedProfile?.sub_role || 'opening_batsman',
-    development_objectives: storedProfile?.development_objectives || ['explosiveness'],
-    experience_level: storedProfile?.experience_level || 'intermediate',
-    training_days_per_week: storedProfile?.training_days_per_week || 4,
-    session_duration_minutes: storedProfile?.session_duration_minutes || 60,
-    age: storedProfile?.age || 21,
-    weight_kg: storedProfile?.weight_kg || 72,
-    height_cm: storedProfile?.height_cm || 178,
+    sport: 'cricket',
+    discipline: '',
+    primary_role: 'batsman',
+    sub_role: 'opening_batsman',
+    development_objectives: ['explosiveness'],
+    experience_level: 'intermediate',
+    training_days_per_week: 4,
+    session_duration_minutes: 60,
+    age: 21,
+    weight_kg: 72,
+    height_cm: 178,
   });
 
   useEffect(() => {
@@ -49,12 +58,12 @@ export default function Onboarding() {
       try {
         const [sports, objs] = await Promise.all([
           intakeAPI.getSports().catch(() => ({})),
-          intakeAPI.getObjectives().catch(() => []),
+          intakeAPI.getObjectives().catch(() => ({})),
         ]);
         setSportsData(sports);
-        setObjectivesData(Array.isArray(objs) ? objs : objs?.objectives || []);
+        setObjectivesData(objs);
 
-        if (sports && sports['cricket'] && !storedProfile) {
+        if (sports && sports['cricket']) {
           const firstRoleKey = Object.keys(sports['cricket'].roles || {})[0] || 'batsman';
           const firstSubKey = Object.keys(sports['cricket'].roles[firstRoleKey]?.sub_roles || {})[0] || '';
           setProfileData((prev) => ({
@@ -68,7 +77,7 @@ export default function Onboarding() {
       }
     }
     loadTaxonomy();
-  }, [storedProfile]);
+  }, []);
 
   const currentSport = sportsData[profileData.sport] || {};
   const currentRoles = currentSport.roles || {};
@@ -114,17 +123,77 @@ export default function Onboarding() {
     });
   };
 
-  /**
-   * Completes calibration, persists profile locally, and routes directly to the assessment studio.
-   * Zero account creation, zero email/password required!
-   */
+  const handleSignInSubmit = async (e) => {
+    e?.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const loginRes = await authAPI.login({
+        email: authData.email,
+        password: authData.password,
+      });
+
+      const token = loginRes.access_token;
+      if (!token) {
+        throw new Error('Authentication failed. No access token received.');
+      }
+
+      login({ email: authData.email }, token, null);
+      const me = await authAPI.getMe();
+
+      try {
+        const existingProfile = await intakeAPI.getProfile();
+        login(me, token, existingProfile);
+
+        navigate('/dashboard');
+      } catch (profileErr) {
+        if (profileErr.response?.status === 404) {
+          login(me, token, null);
+          setSearchParams({ mode: 'complete-profile' });
+          setStep(1);
+          setError('Welcome back! Please complete your athlete profile configuration.');
+        } else {
+          throw profileErr;
+        }
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+        'Incorrect email or password. Please verify your credentials.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleProfileSubmit = async (e) => {
     e?.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      const payload = {
+      let token = useAthleteStore.getState().token;
+      let me = athlete;
+
+      if (!isCompleteProfile) {
+        await authAPI.register({
+          email: authData.email,
+          password: authData.password,
+          full_name: authData.full_name,
+        });
+
+        const loginRes = await authAPI.login({
+          email: authData.email,
+          password: authData.password,
+        });
+        token = loginRes.access_token;
+        login({ email: authData.email }, token, null);
+
+        me = await authAPI.getMe();
+      }
+
+      const savedProfile = await intakeAPI.submitProfile({
         sport: profileData.sport,
         discipline: profileData.discipline,
         primary_role: profileData.primary_role,
@@ -136,24 +205,17 @@ export default function Onboarding() {
         age: Number(profileData.age),
         weight_kg: Number(profileData.weight_kg),
         height_cm: Number(profileData.height_cm),
-      };
-
-      // Persist in local store
-      setProfile(payload);
-
-      // Submit to backend if available (non-blocking)
-      intakeAPI.submitProfile(payload).catch((err) => {
-        console.warn('Backend intake submit deferred:', err?.message);
       });
 
-      const targetSport = normalizeSport(profileData.sport);
+      login(me || { email: authData.email }, token, savedProfile);
+      setProfile(savedProfile);
+
+      const targetSport = normalizeSport(savedProfile?.sport || profileData.sport);
       navigate(`/assessment/${targetSport || 'cricket'}`);
     } catch (err) {
       setError(
-        formatErrorMessage(
-          err,
-          'Failed to complete profile configuration. Please check your inputs.'
-        )
+        err.response?.data?.detail ||
+        'Failed to complete profile configuration. Please check your inputs.'
       );
     } finally {
       setLoading(false);
@@ -161,125 +223,210 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#07080C] text-[#F1F5F9] flex flex-col w-full selection:bg-white/20 select-none relative overflow-x-hidden">
-      <div className="w-full max-w-xl mx-auto min-h-[100dvh] flex flex-col justify-between px-4 py-4 sm:py-6 relative z-10">
+    <div className="min-h-[100dvh] bg-[#07080C] text-[#F1F5F9] flex flex-col w-full selection:bg-white/20 select-none relative overflow-hidden">
+      {/* Ambient background depth for glass refraction */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[550px] h-[350px] bg-white/[0.02] blur-[130px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/3 -right-20 w-[300px] h-[300px] bg-emerald-500/[0.02] blur-[130px] rounded-full pointer-events-none" />
+
+      <div className="w-full max-w-lg mx-auto min-h-[100dvh] flex flex-col justify-center px-4 py-6 sm:py-10 relative z-10">
         {/* Top Header */}
-        <div className="w-full flex items-center justify-between mb-3 pt-safe">
-          <Link to="/">
-            <SportifyLogo size="xs" showTagline={false} />
-          </Link>
-          <Link
-            to="/dashboard"
-            className="text-[11px] font-medium text-slate-300 hover:text-white font-tech tracking-wide px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-all flex items-center gap-1.5"
-          >
-            <span>Skip to Dashboard</span>
-            <ArrowRightIcon className="w-3 h-3 text-slate-400" />
-          </Link>
+        <div className="w-full flex items-center justify-between mb-4">
+          <SportifyLogo size="xs" showTagline={false} />
+          {!isCompleteProfile && (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setSearchParams({ mode: isSignIn ? 'signup' : 'signin' });
+              }}
+              className="text-xs font-sans text-slate-300 hover:text-white px-3.5 py-1.5 rounded-lg border border-white/[0.09] bg-white/[0.03] backdrop-blur-md hover:bg-white/[0.07] hover:border-white/20 transition-all shadow-sm"
+            >
+              {isSignIn ? 'Need Account? Sign Up' : 'Have Account? Sign In'}
+            </button>
+          )}
         </div>
 
-        {/* Main Multi-Step Box */}
-        <div className="w-full sportify-card p-4 sm:p-6 border border-white/[0.1] shadow-2xl relative flex-1 flex flex-col justify-between my-2">
-          {/* Step Progress Bar (3 steps: Sport, Objectives, Biometrics) */}
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08]">
-            {[
-              { num: 1, label: 'Sport' },
-              { num: 2, label: 'Objectives' },
-              { num: 3, label: 'Biometrics' },
-            ].map((s) => (
-              <div key={s.num} className="flex items-center gap-1.5">
-                <div
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold font-mono transition-all ${
-                    step === s.num
-                      ? 'bg-white text-slate-950 shadow-[0_0_12px_rgba(255,255,255,0.35)]'
-                      : step > s.num
-                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/35'
-                      : 'bg-white/[0.04] text-slate-500 border border-white/[0.06]'
-                  }`}
-                >
-                  {step > s.num ? <CheckIcon className="w-3 h-3" /> : s.num}
+        {/* Main Form Container */}
+        <div className="w-full p-5 sm:p-7 rounded-2xl bg-gradient-to-b from-[#10131E]/90 via-[#0B0D15]/90 to-[#07080E]/95 backdrop-blur-2xl border border-white/[0.09] shadow-[0_20px_60px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden">
+          {/* Top specular hairline */}
+          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
+          {/* Step Progress Bar (hidden in sign-in mode) */}
+          {!isSignIn && (
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.07]">
+              {[
+                { num: 1, label: 'Sport' },
+                { num: 2, label: 'Goals' },
+                { num: 3, label: 'Biometrics' },
+                ...(!isCompleteProfile ? [{ num: 4, label: 'Account' }] : []),
+              ].map((s) => (
+                <div key={s.num} className="flex items-center gap-1.5">
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold transition-all ${step === s.num
+                        ? 'bg-white text-slate-950 shadow-[0_0_12px_rgba(255,255,255,0.25)]'
+                        : step > s.num
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm'
+                          : 'bg-white/[0.03] text-slate-500 border border-white/[0.07] backdrop-blur-sm'
+                      }`}
+                  >
+                    {step > s.num ? <CheckIcon className="w-3.5 h-3.5" /> : s.num}
+                  </div>
+                  <span
+                    className={`text-xs font-sans ${step === s.num ? 'text-white font-medium' : 'text-slate-400'
+                      }`}
+                  >
+                    {s.label}
+                  </span>
                 </div>
-                <span className="text-[10px] font-medium font-tech tracking-wide text-slate-400">
-                  {s.label}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Error Notification */}
           {error && (
-            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs mb-3 flex items-center gap-2 font-medium">
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs mb-3 flex items-center gap-2 font-sans">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* ── STEP 1: SPORT & ROLE SELECTION ──────────────────────────────── */}
-          {step === 1 && (
-            <div className="space-y-4">
+          {/* ── DEDICATED SIGN IN FORM ────────────────────────────────────────── */}
+          {isSignIn && (
+            <form onSubmit={handleSignInSubmit} className="space-y-4 my-auto">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Select Sport & Role
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
+                  Sign In to Sportify
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Choose your sport and tactical playing position to calibrate role-specific benchmarks.
+                  Access your personalized athlete profile and training pathway.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="athlete@sportify.com"
+                  value={authData.email}
+                  onChange={(e) =>
+                    setAuthData({ ...authData, email: e.target.value })
+                  }
+                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={authData.password}
+                  onChange={(e) =>
+                    setAuthData({ ...authData, password: e.target.value })
+                  }
+                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-full h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)] ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                >
+                  <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+                  {!loading && <ArrowRightIcon className="w-4 h-4 text-slate-950" />}
+                </button>
+              </div>
+
+              <p className="text-center text-xs text-slate-400 pt-2 font-sans">
+                New athlete?{' '}
+                <button
+                  type="button"
+                  onClick={() => setSearchParams({ mode: 'signup' })}
+                  className="text-white hover:underline font-semibold ml-1"
+                >
+                  Create your profile
+                </button>
+              </p>
+            </form>
+          )}
+
+          {/* ── STEP 1: SPORT & POSITION ───────────────────────────────────────── */}
+          {!isSignIn && step === 1 && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
+                  Tell us how you play
+                </h2>
+                <p className="text-xs text-slate-400 font-sans">
+                  Choose your sport, playing position, and tactical specialty.
                 </p>
               </div>
 
               {/* Sport Selector */}
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">
                   Sport
                 </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { id: 'cricket', label: 'Cricket', icon: CricketIcon },
-                    { id: 'football', label: 'Football', icon: FootballIcon },
-                    { id: 'basketball', label: 'Basketball', icon: BasketballIcon },
-                    { id: 'athletics', label: 'Athletics', icon: AthleticsIcon },
-                  ].map((s) => {
-                    const Icon = s.icon;
-                    const isSelected = profileData.sport === s.id;
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.keys(sportsData).map((sportKey) => {
+                    const isSelected = profileData.sport === sportKey;
                     return (
                       <button
-                        key={s.id}
+                        key={sportKey}
                         type="button"
-                        onClick={() => handleSportSelect(s.id)}
-                        className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all text-center ${
-                          isSelected
-                            ? 'bg-white/[0.08] border-white/30 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6)]'
-                            : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                        }`}
+                        onClick={() => handleSportSelect(sportKey)}
+                        className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition-all ${isSelected
+                            ? 'bg-gradient-to-b from-white/[0.08] to-white/[0.04] backdrop-blur-md border-white/35 text-white shadow-sm ring-1 ring-white/10'
+                            : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
+                          }`}
                       >
-                        <Icon className={`w-5 h-5 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
-                        <span className="text-[11px] font-bold font-tech tracking-tight">{s.label}</span>
+                        <div className="w-7 h-7 rounded-lg bg-white/[0.04] backdrop-blur-sm border border-white/10 flex items-center justify-center shrink-0">
+                          <SportIcon sport={sportKey} className="w-4 h-4 text-slate-200" />
+                        </div>
+                        <span className="text-xs font-semibold capitalize truncate">
+                          {sportsData[sportKey].name}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Position / Role Selector */}
+              {/* Primary Role Selector */}
               {Object.keys(currentRoles).length > 0 && (
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
-                    Primary Position
+                  <label className="text-xs font-medium text-slate-300 block mb-1.5">
+                    Playing Position
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                    {Object.keys(currentRoles).map((rKey) => {
-                      const rObj = currentRoles[rKey];
-                      const isSelected = profileData.primary_role === rKey;
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(currentRoles).map((roleKey) => {
+                      const isSelected = profileData.primary_role === roleKey;
                       return (
                         <button
-                          key={rKey}
+                          key={roleKey}
                           type="button"
-                          onClick={() => handleRoleSelect(rKey)}
-                          className={`p-2 rounded-xl border text-left transition-all ${
+                          onClick={() => handleRoleSelect(roleKey)}
+                          className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
                             isSelected
-                              ? 'bg-white/[0.08] border-white/30 text-white'
-                              : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white'
+                              ? 'bg-white/[0.08] backdrop-blur-md border-white/35 text-white shadow-sm ring-1 ring-white/10'
+                              : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
                           }`}
                         >
-                          <div className="text-xs font-bold font-sans truncate">{rObj.name || rKey}</div>
+                          <span className="text-xs font-semibold capitalize truncate">
+                            {currentRoles[roleKey].title || roleKey.replace(/_/g, ' ')}
+                          </span>
+                          {isSelected && (
+                            <CheckIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-1" />
+                          )}
                         </button>
                       );
                     })}
@@ -287,93 +434,113 @@ export default function Onboarding() {
                 </div>
               )}
 
-              {/* Sub-Role / Tactical Specialty */}
+              {/* Sub-Role Selector as Custom Dropdown */}
               {Object.keys(currentSubRoles).length > 0 && (
-                <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
-                    Tactical Specialty / Sub-Role
+                <div className="relative">
+                  <label className="text-xs font-medium text-slate-300 block mb-1.5">
+                    Specialty / Tactical Focus
                   </label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {Object.keys(currentSubRoles).map((srKey) => {
-                      const srObj = currentSubRoles[srKey];
-                      const isSelected = profileData.sub_role === srKey;
-                      return (
-                        <button
-                          key={srKey}
-                          type="button"
-                          onClick={() => setProfileData({ ...profileData, sub_role: srKey })}
-                          className={`p-2 rounded-xl border text-left transition-all ${
-                            isSelected
-                              ? 'bg-white/[0.08] border-white/30 text-white'
-                              : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          <div className="text-xs font-bold font-sans truncate">
-                            {srObj.name || srKey.replace(/_/g, ' ')}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSpecialtyOpen((prev) => !prev)}
+                    className="w-full h-11 px-3.5 rounded-xl bg-white/[0.03] backdrop-blur-md border border-white/[0.09] hover:border-white/25 text-left flex items-center justify-between transition-all focus:outline-none focus:border-white/40 focus:bg-white/[0.05]"
+                  >
+                    <span className="text-xs font-semibold text-white truncate">
+                      {currentSubRoles[profileData.sub_role]?.title ||
+                        profileData.sub_role?.replace(/_/g, ' ') ||
+                        'Select Specialty'}
+                    </span>
+                    <ChevronDownIcon
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${
+                        isSpecialtyOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {isSpecialtyOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-20"
+                        onClick={() => setIsSpecialtyOpen(false)}
+                      />
+                      <div className="absolute left-0 right-0 top-full mt-1.5 z-30 p-1.5 rounded-xl bg-[#0B0D15]/95 backdrop-blur-2xl border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.85)] space-y-1">
+                        {Object.keys(currentSubRoles).map((subKey) => {
+                          const isSelected = profileData.sub_role === subKey;
+                          return (
+                            <button
+                              key={subKey}
+                              type="button"
+                              onClick={() => {
+                                setProfileData((prev) => ({ ...prev, sub_role: subKey }));
+                                setIsSpecialtyOpen(false);
+                              }}
+                              className={`w-full p-2.5 rounded-lg text-left text-xs font-semibold flex items-center justify-between transition-all ${
+                                isSelected
+                                  ? 'bg-white/[0.1] text-white'
+                                  : 'text-slate-300 hover:text-white hover:bg-white/[0.05]'
+                              }`}
+                            >
+                              <span className="truncate">
+                                {currentSubRoles[subKey].title || subKey.replace(/_/g, ' ')}
+                              </span>
+                              {isSelected && (
+                                <CheckIcon className="w-3.5 h-3.5 text-emerald-400 shrink-0 ml-1" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="w-full h-11 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2 mt-2"
+                className="w-full h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold mt-3 shadow-[0_4px_20px_rgba(255,255,255,0.12)]"
               >
-                <span>Next: Objectives</span>
-                <ArrowRightIcon className="w-3.5 h-3.5" />
+                <span>Continue: Objectives</span>
+                <ArrowRightIcon className="w-4 h-4 text-slate-950" />
               </button>
             </div>
           )}
 
-          {/* ── STEP 2: OBJECTIVES ──────────────────────────────────────────── */}
-          {step === 2 && (
+          {/* ── STEP 2: OBJECTIVES ────────────────────────────────────────────── */}
+          {!isSignIn && step === 2 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Development Objectives
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
+                  What do you want to improve?
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Select key physical and tactical qualities you want the pathway to prioritize.
+                  Select your primary physical and movement priorities.
                 </p>
               </div>
 
-              <div className="space-y-2">
-                {[
-                  { id: 'explosiveness', name: 'Explosive Power', desc: 'Vertical impulse, acceleration, and force rate' },
-                  { id: 'deceleration', name: 'Deceleration & Landing Control', desc: 'Eccentric knee absorption and landing stability' },
-                  { id: 'rotational_power', name: 'Rotational Velocity', desc: 'Torso torque, kinetic whip, and core sequencing' },
-                  { id: 'joint_stability', name: 'Joint Stability & Prehab', desc: 'Knee valgus resistance, ankle stiffness, and shoulder health' },
-                  { id: 'first_step', name: 'First-Step Quickness', desc: 'Lateral change-of-direction and reactive takeoff' },
-                ].map((obj) => {
-                  const isChecked = profileData.development_objectives?.includes(obj.id);
+              <div className="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-0.5">
+                {Object.keys(objectivesData).map((objKey) => {
+                  const isSelected = profileData.development_objectives?.includes(objKey);
                   return (
-                    <div
-                      key={obj.id}
-                      onClick={() => toggleObjective(obj.id)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
-                        isChecked
-                          ? 'bg-white/[0.07] border-white/25 text-white shadow-sm'
-                          : 'bg-white/[0.02] border-white/[0.06] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                      }`}
-                    >
-                      <div
-                        className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center shrink-0 transition-all ${
-                          isChecked
-                            ? 'bg-white text-slate-950'
-                            : 'border border-white/20 bg-white/[0.02]'
+                    <button
+                      key={objKey}
+                      type="button"
+                      onClick={() => toggleObjective(objKey)}
+                      className={`p-3 rounded-xl border text-left transition-all ${isSelected
+                          ? 'bg-gradient-to-b from-white/[0.08] to-white/[0.04] backdrop-blur-md border-white/35 text-white shadow-sm ring-1 ring-white/10'
+                          : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
                         }`}
-                      >
-                        {isChecked && <CheckIcon className="w-3 h-3" />}
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-semibold capitalize">
+                          {objectivesData[objKey].title || objKey.replace(/_/g, ' ')}
+                        </span>
+                        {isSelected && <CheckIcon className="w-4 h-4 text-emerald-400" />}
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-white font-sans">{obj.name}</div>
-                        <div className="text-[11px] text-slate-400 font-sans mt-0.5">{obj.desc}</div>
-                      </div>
-                    </div>
+                      <p className="text-[11px] text-slate-400 font-sans line-clamp-2">
+                        {objectivesData[objKey].description}
+                      </p>
+                    </button>
                   );
                 })}
               </div>
@@ -389,46 +556,45 @@ export default function Onboarding() {
                 <button
                   type="button"
                   onClick={() => setStep(3)}
-                  className="w-2/3 h-11 btn-primary text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                  className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)]"
                 >
-                  <span>Next: Biometrics</span>
-                  <ArrowRightIcon className="w-3.5 h-3.5" />
+                  <span>Continue: Biometrics</span>
+                  <ArrowRightIcon className="w-4 h-4 text-slate-950" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── STEP 3: BIOMETRICS & TIER ────────────────────────────────────── */}
-          {step === 3 && (
+          {/* ── STEP 3: BIOMETRICS & TIER ─────────────────────────────────────── */}
+          {!isSignIn && step === 3 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-base font-bold font-heading tracking-wider uppercase text-white mb-1">
-                  Biometrics & Tier
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
+                  Physical Biometrics
                 </h2>
                 <p className="text-xs text-slate-400 font-sans">
-                  Helps calibrate kinetic power benchmarks and volume loading.
+                  Calibrates force metrics and workload limits.
                 </p>
               </div>
 
-              {/* Age, Height, Weight */}
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
                     Age
                   </label>
                   <input
                     type="number"
-                    min="12"
+                    min="10"
                     max="65"
                     value={profileData.age}
                     onChange={(e) =>
                       setProfileData({ ...profileData, age: e.target.value })
                     }
-                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center rounded-xl bg-white/[0.04] border border-white/10 text-white"
+                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
                     Height (cm)
                   </label>
                   <input
@@ -439,11 +605,11 @@ export default function Onboarding() {
                     onChange={(e) =>
                       setProfileData({ ...profileData, height_cm: e.target.value })
                     }
-                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center rounded-xl bg-white/[0.04] border border-white/10 text-white"
+                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
+                  <label className="text-xs font-medium text-slate-300 block mb-1">
                     Weight (kg)
                   </label>
                   <input
@@ -454,77 +620,39 @@ export default function Onboarding() {
                     onChange={(e) =>
                       setProfileData({ ...profileData, weight_kg: e.target.value })
                     }
-                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center rounded-xl bg-white/[0.04] border border-white/10 text-white"
+                    className="w-full h-11 px-2 sportify-input text-xs font-mono text-center"
                   />
                 </div>
               </div>
 
-              {/* Competitive Tier */}
+              {/* Experience Level */}
               <div>
-                <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1.5">
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">
                   Competitive Tier
                 </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {['beginner', 'intermediate', 'advanced', 'elite'].map((lvl) => (
-                    <button
-                      key={lvl}
-                      type="button"
-                      onClick={() =>
-                        setProfileData({ ...profileData, experience_level: lvl })
-                      }
-                      className={`h-9 rounded-xl border text-[11px] font-bold capitalize flex items-center justify-center transition-all ${
-                        profileData.experience_level === lvl
-                          ? 'bg-white/[0.1] border-white/40 text-white shadow-[0_2px_12px_rgba(0,0,0,0.6)]'
-                          : 'bg-white/[0.02] border-white/[0.08] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                      }`}
-                    >
-                      {lvl}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-4 gap-2">
+                  {['beginner', 'intermediate', 'advanced', 'elite'].map((lvl) => {
+                    const isSelected = profileData.experience_level === lvl;
+                    return (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() =>
+                          setProfileData({ ...profileData, experience_level: lvl })
+                        }
+                        className={`h-10 rounded-xl border text-xs font-medium capitalize flex items-center justify-center transition-all ${isSelected
+                            ? 'bg-white/[0.08] backdrop-blur-md border-white/35 text-white font-semibold ring-1 ring-white/10'
+                            : 'bg-white/[0.02] backdrop-blur-sm border-white/[0.06] text-slate-400 hover:text-white hover:border-white/15 hover:bg-white/[0.04]'
+                          }`}
+                      >
+                        {lvl}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Training Availability */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
-                    Days / Week
-                  </label>
-                  <select
-                    value={profileData.training_days_per_week}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, training_days_per_week: Number(e.target.value) })
-                    }
-                    className="w-full h-11 px-3 sportify-input text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white font-mono"
-                  >
-                    {[2, 3, 4, 5, 6].map((d) => (
-                      <option key={d} value={d} className="bg-[#0C0E14] text-white">
-                        {d} Days
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold font-tech uppercase text-slate-400 block mb-1">
-                    Session Duration
-                  </label>
-                  <select
-                    value={profileData.session_duration_minutes}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, session_duration_minutes: Number(e.target.value) })
-                    }
-                    className="w-full h-11 px-3 sportify-input text-xs rounded-xl bg-white/[0.04] border border-white/10 text-white font-mono"
-                  >
-                    {[30, 45, 60, 75, 90].map((m) => (
-                      <option key={m} value={m} className="bg-[#0C0E14] text-white">
-                        {m} Mins
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 pt-2">
+              <div className="flex items-center gap-2.5 pt-1">
                 <button
                   type="button"
                   onClick={() => setStep(2)}
@@ -533,19 +661,110 @@ export default function Onboarding() {
                   Back
                 </button>
 
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleProfileSubmit}
-                  className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 uppercase tracking-wider text-xs shadow-[0_4px_20px_rgba(255,255,255,0.2)] ${
-                    loading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <span>{loading ? 'Configuring...' : 'Launch Studio'}</span>
-                  {!loading && <ArrowRightIcon className="w-3.5 h-3.5" />}
-                </button>
+                {isCompleteProfile ? (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleProfileSubmit}
+                    className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)] ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                  >
+                    <span>{loading ? 'Saving...' : 'Save Profile'}</span>
+                    {!loading && <ArrowRightIcon className="w-4 h-4 text-slate-950" />}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setStep(4)}
+                    className="w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)]"
+                  >
+                    <span>Continue: Account</span>
+                    <ArrowRightIcon className="w-4 h-4 text-slate-950" />
+                  </button>
+                )}
               </div>
             </div>
+          )}
+
+          {/* ── STEP 4: ACCOUNT CREATION (SIGNUP ONLY) ───────────────────────── */}
+          {!isSignIn && !isCompleteProfile && step === 4 && (
+            <form onSubmit={handleProfileSubmit} className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold font-heading text-white mb-0.5">
+                  Create Athlete Account
+                </h2>
+                <p className="text-xs text-slate-400 font-sans">
+                  Your profile and assessments sync securely across all your devices.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Alex Morgan"
+                  value={authData.full_name}
+                  onChange={(e) =>
+                    setAuthData({ ...authData, full_name: e.target.value })
+                  }
+                  className="w-full h-11 px-3.5 sportify-input text-xs font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="athlete@sportify.com"
+                  value={authData.email}
+                  onChange={(e) =>
+                    setAuthData({ ...authData, email: e.target.value })
+                  }
+                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={authData.password}
+                  onChange={(e) =>
+                    setAuthData({ ...authData, password: e.target.value })
+                  }
+                  className="w-full h-11 px-3.5 sportify-input text-xs font-mono"
+                />
+              </div>
+
+              <div className="flex items-center gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="w-1/3 h-11 btn-secondary text-xs flex items-center justify-center"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-2/3 h-11 btn-primary flex items-center justify-center gap-2 text-xs font-bold shadow-[0_4px_20px_rgba(255,255,255,0.12)] ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                >
+                  <span>{loading ? 'Creating Account...' : 'Complete Profile'}</span>
+                  {!loading && <ArrowRightIcon className="w-4 h-4 text-slate-950" />}
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </div>

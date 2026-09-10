@@ -3,12 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAthleteStore } from '../../store/athleteStore';
 import { normalizeSport } from '../../config/sportAssessmentConfig';
 import {
-  DashboardIcon,
-  PlanIcon,
-  VideoIcon,
-  RecoveryIcon,
-  ProgressIcon,
-  ZapIcon,
+  NavHomeIcon,
+  NavTrainingIcon,
+  NavAssessIcon,
+  NavRecoveryIcon,
+  NavProgressIcon,
 } from '../common/Icons';
 
 export default function MobileBottomNav() {
@@ -27,60 +26,68 @@ export default function MobileBottomNav() {
     {
       to: '/dashboard',
       label: 'Home',
-      icon: DashboardIcon,
+      icon: NavHomeIcon,
       isActive: location.pathname === '/dashboard',
     },
     {
       to: '/plan',
       label: 'Training',
-      icon: PlanIcon,
+      icon: NavTrainingIcon,
       isActive: location.pathname.startsWith('/plan'),
     },
-    // Center item is the elevated Record/Assess button
+    // Center item is the elevated Assess action
     {
       isCenter: true,
       to: assessmentPath,
-      label: 'Record',
-      icon: VideoIcon,
+      label: 'Assess',
+      icon: NavAssessIcon,
       isActive: isAssessmentActive,
     },
     {
       to: '/recovery',
       label: 'Recovery',
-      icon: RecoveryIcon,
+      icon: NavRecoveryIcon,
       isActive: location.pathname.startsWith('/recovery'),
     },
     {
       to: '/progress',
       label: 'Progress',
-      icon: ProgressIcon,
+      icon: NavProgressIcon,
       isActive: location.pathname.startsWith('/progress'),
     },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 select-none md:hidden bg-[#07080C]/95 backdrop-blur-2xl border-t border-white/[0.08] px-3 pt-2 pb-[max(env(safe-area-inset-bottom,0px),12px)] shadow-[0_-12px_36px_rgba(0,0,0,0.8)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 select-none md:hidden bg-[#07080C]/95 backdrop-blur-2xl border-t border-white/[0.06] px-3 pt-1.5 pb-[max(env(safe-area-inset-bottom,0px),10px)] shadow-[0_-8px_30px_rgba(0,0,0,0.85)]">
       <div className="flex items-center justify-around max-w-lg mx-auto">
-        {navItems.map((item, idx) => {
+        {navItems.map((item) => {
           if (item.isCenter) {
+            const CenterIcon = item.icon;
             return (
               <Link
-                key="center-record"
+                key="center-assess"
                 to={item.to}
-                className="flex flex-col items-center group -mt-5 focus:outline-none"
-                aria-label="New Assessment"
+                className="flex-1 flex flex-col items-center justify-center -mt-4 focus:outline-none min-h-[48px] py-1 active:scale-95 transition-transform"
+                aria-label="Movement Assessment"
               >
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center p-2.5 border shadow-2xl transition-all duration-150 active:scale-90 ${item.isActive
-                    ? 'bg-white text-slate-950 border-white shadow-[0_0_20px_rgba(255,255,255,0.35)]'
-                    : 'bg-gradient-to-b from-white/20 to-white/5 border-white/30 text-white hover:border-white/50 shadow-[0_4px_16px_rgba(0,0,0,0.6)]'
-                    }`}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-150 ${
+                    item.isActive
+                      ? 'bg-white text-slate-950 border border-white shadow-[0_2px_14px_rgba(255,255,255,0.25)]'
+                      : 'bg-[#131622] text-white border border-white/20 hover:border-white/35 shadow-lg'
+                  }`}
                 >
-                  <ZapIcon className={`w-5 h-5 ${item.isActive ? 'text-slate-950 fill-slate-950' : 'text-white'}`} />
+                  <CenterIcon
+                    className={`w-5 h-5 transition-colors ${
+                      item.isActive ? 'text-slate-950' : 'text-emerald-400'
+                    }`}
+                    strokeWidth={2.25}
+                  />
                 </div>
                 <span
-                  className={`text-[9px] font-tech font-bold uppercase tracking-wider mt-1 transition-colors ${item.isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'
-                    }`}
+                  className={`text-[10px] font-sans font-medium mt-1 text-center leading-none transition-colors ${
+                    item.isActive ? 'text-white font-semibold' : 'text-slate-400'
+                  }`}
                 >
                   {item.label}
                 </span>
@@ -93,18 +100,22 @@ export default function MobileBottomNav() {
             <Link
               key={item.to}
               to={item.to}
-              className={`flex-1 flex flex-col items-center py-1 rounded-xl transition-all duration-150 active:scale-95 focus:outline-none ${item.isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
-                }`}
+              className={`flex-1 flex flex-col items-center justify-center min-h-[48px] py-1 rounded-xl transition-all duration-150 active:scale-95 focus:outline-none ${
+                item.isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <div className="relative">
-                <Icon className="w-5 h-5 transition-transform duration-150" />
-                {item.isActive && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-                )}
+              <div className="flex items-center justify-center w-6 h-6">
+                <Icon
+                  className={`w-5 h-5 transition-all duration-150 ${
+                    item.isActive ? 'text-white' : 'text-slate-400'
+                  }`}
+                  strokeWidth={2.25}
+                />
               </div>
               <span
-                className={`text-[10px] font-sans font-medium mt-1 tracking-tight transition-colors ${item.isActive ? 'text-white font-semibold' : 'text-slate-400'
-                  }`}
+                className={`text-[10px] font-sans mt-1 text-center leading-none tracking-tight transition-colors ${
+                  item.isActive ? 'text-white font-semibold' : 'text-slate-400'
+                }`}
               >
                 {item.label}
               </span>

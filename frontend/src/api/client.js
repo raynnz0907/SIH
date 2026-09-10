@@ -444,253 +444,53 @@ const MOCK_REASSESSMENT = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const authAPI = {
-  register: async (data) => {
-    try {
-      const res = await apiClient.post('/auth/register', data);
-      return res.data;
-    } catch (err) {
-      // Return realistic mock registered user if standalone
-      return { id: 'athlete-mock-1', email: data.email, full_name: data.full_name };
-    }
-  },
-
-  login: async (data) => {
-    try {
-      const res = await apiClient.post('/auth/login', data);
-      return res.data;
-    } catch (err) {
-      // Return realistic mock login token if standalone
-      return { access_token: 'mock-jwt-telemetry-token', token_type: 'bearer' };
-    }
-  },
-
-  getMe: async () => {
-    try {
-      const res = await apiClient.get('/auth/me');
-      return res.data;
-    } catch (err) {
-      const storeState = useAthleteStore.getState();
-      return storeState.athlete || {
-        id: 'athlete-mock-1',
-        email: 'athlete@sportify.ai',
-        full_name: 'Alex Vance',
-      };
-    }
-  },
+  register: (data) => apiClient.post('/auth/register', data).then((res) => res.data),
+  login: (data) => apiClient.post('/auth/login', data).then((res) => res.data),
+  getMe: () => apiClient.get('/auth/me').then((res) => res.data),
 };
 
 export const intakeAPI = {
-  getSports: async () => {
-    try {
-      const res = await apiClient.get('/intake/sports');
-      return res.data;
-    } catch (err) {
-      return MOCK_SPORTS;
-    }
-  },
-
-  getObjectives: async () => {
-    try {
-      const res = await apiClient.get('/intake/objectives');
-      return res.data;
-    } catch (err) {
-      return MOCK_OBJECTIVES;
-    }
-  },
-
-  submitProfile: async (data) => {
-    try {
-      const res = await apiClient.post('/intake/profile', data);
-      return res.data;
-    } catch (err) {
-      return {
-        id: 'profile-mock-1',
-        athlete_id: 'athlete-mock-1',
-        ...data,
-      };
-    }
-  },
-
-  getProfile: async () => {
-    try {
-      const res = await apiClient.get('/intake/profile');
-      return res.data;
-    } catch (err) {
-      const storeState = useAthleteStore.getState();
-      return (
-        storeState.profile || {
-          sport: 'cricket',
-          primary_role: 'batsman',
-          sub_role: 'opening_batsman',
-          experience_level: 'intermediate',
-          training_days_per_week: 4,
-          session_duration_minutes: 60,
-          age: 21,
-          weight_kg: 72,
-          height_cm: 178,
-          development_objectives: ['explosiveness', 'deceleration'],
-        }
-      );
-    }
-  },
+  getSports: () => apiClient.get('/intake/sports').then((res) => res.data),
+  getObjectives: () => apiClient.get('/intake/objectives').then((res) => res.data),
+  submitProfile: (data) => apiClient.post('/intake/profile', data).then((res) => res.data),
+  getProfile: () => apiClient.get('/intake/profile').then((res) => res.data),
 };
 
 export const videoAPI = {
-  coach: async (formData) => {
-    try {
-      const res = await apiClient.post('/video/coach', formData, {
+  coach: (formData) =>
+    apiClient
+      .post('/video/coach', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return res.data;
-    } catch (err) {
-      return { job_id: 'coach-sim-' + Date.now(), status: 'completed', coaching: MOCK_ASSESSMENT };
-    }
-  },
-
-  uploadVideo: async (formData) => {
-    try {
-      const res = await apiClient.post('/video/upload', formData, {
+      })
+      .then((res) => res.data),
+  uploadVideo: (formData) =>
+    apiClient
+      .post('/video/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return res.data;
-    } catch (err) {
-      return { id: 'assess-mock-latest', status: 'completed' };
-    }
-  },
-
-  getStatus: async (id) => {
-    try {
-      const res = await apiClient.get(`/video/coach/${id}`);
-      return res.data;
-    } catch (err) {
-      return { status: 'completed', result: MOCK_ASSESSMENT };
-    }
-  },
-
-  getProtocols: async () => {
-    try {
-      const res = await apiClient.get('/video/protocols');
-      return res.data;
-    } catch (err) {
-      return [{ id: 'front_foot_drive', name: 'Front-Foot Drive Mechanics' }];
-    }
-  },
+      })
+      .then((res) => res.data),
+  getStatus: (id) => apiClient.get(`/video/coach/${id}`).then((res) => res.data),
+  getProtocols: () => apiClient.get('/video/protocols').then((res) => res.data),
 };
 
 export const assessmentAPI = {
-  submitManual: async (data) => {
-    try {
-      const res = await apiClient.post('/assessment/manual', data);
-      return res.data;
-    } catch (err) {
-      return MOCK_ASSESSMENT;
-    }
-  },
-
-  getLatest: async () => {
-    try {
-      const res = await apiClient.get('/assessment/latest');
-      return res.data;
-    } catch (err) {
-      return MOCK_ASSESSMENT;
-    }
-  },
-
-  getProtocols: async () => {
-    try {
-      const res = await apiClient.get('/assessment/protocols');
-      return res.data;
-    } catch (err) {
-      return [{ id: 'primary', name: 'Primary Kinematic Protocol' }];
-    }
-  },
+  submitManual: (data) => apiClient.post('/assessment/manual', data).then((res) => res.data),
+  getLatest: () => apiClient.get('/assessment/latest').then((res) => res.data),
+  getProtocols: () => apiClient.get('/assessment/protocols').then((res) => res.data),
 };
 
 export const planAPI = {
-  getCurrent: async () => {
-    try {
-      const res = await apiClient.get('/plan/current');
-      return res.data;
-    } catch (err) {
-      return MOCK_PLAN;
-    }
-  },
-
-  generate: async () => {
-    try {
-      const res = await apiClient.post('/plan/generate');
-      return res.data;
-    } catch (err) {
-      return MOCK_PLAN;
-    }
-  },
-
-  getRecovery: async () => {
-    try {
-      const res = await apiClient.get('/plan/recovery');
-      return res.data;
-    } catch (err) {
-      return MOCK_RECOVERY;
-    }
-  },
-
-  getHistory: async () => {
-    try {
-      const res = await apiClient.get('/plan/history');
-      return res.data;
-    } catch (err) {
-      return [MOCK_PLAN];
-    }
-  },
+  getCurrent: () => apiClient.get('/plan/current').then((res) => res.data),
+  generate: () => apiClient.post('/plan/generate').then((res) => res.data),
+  getRecovery: () => apiClient.get('/plan/recovery').then((res) => res.data),
+  getHistory: () => apiClient.get('/plan/history').then((res) => res.data),
 };
 
 export const progressAPI = {
-  logSession: async (data) => {
-    try {
-      const res = await apiClient.post('/progress/log', data);
-      return res.data;
-    } catch (err) {
-      const newLog = {
-        id: 'l-' + Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        workout_type: data.session_type || 'General Training',
-        duration: Number(data.duration_minutes) || 45,
-        rpe: Number(data.perceived_exertion) || 7,
-        workload_au: (Number(data.duration_minutes) || 45) * (Number(data.perceived_exertion) || 7),
-      };
-      MOCK_LOGS.unshift(newLog);
-      MOCK_DASHBOARD.training_stats.total_sessions += 1;
-      MOCK_DASHBOARD.training_stats.streak_days += 1;
-      return newLog;
-    }
-  },
-
-  getDashboard: async () => {
-    try {
-      const res = await apiClient.get('/progress/dashboard');
-      return res.data;
-    } catch (err) {
-      return MOCK_DASHBOARD;
-    }
-  },
-
-  getLogs: async (limit = 20) => {
-    try {
-      const res = await apiClient.get(`/progress/logs?limit=${limit}`);
-      return res.data;
-    } catch (err) {
-      return MOCK_LOGS.slice(0, limit);
-    }
-  },
-
-  getReassessment: async () => {
-    try {
-      const res = await apiClient.get('/progress/reassessment');
-      return res.data;
-    } catch (err) {
-      return MOCK_REASSESSMENT;
-    }
-  },
+  logSession: (data) => apiClient.post('/progress/log', data).then((res) => res.data),
+  getDashboard: () => apiClient.get('/progress/dashboard').then((res) => res.data),
+  getLogs: (limit = 20) => apiClient.get(`/progress/logs?limit=${limit}`).then((res) => res.data),
+  getReassessment: () => apiClient.get('/progress/reassessment').then((res) => res.data),
 };
 
 export default apiClient;

@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import text
 from config import settings
 
 # SQLite needs check_same_thread=False; safe to ignore for aiosqlite
@@ -28,6 +29,48 @@ async def get_db():
 
 
 async def create_all_tables():
-    """Create all tables on startup (SQLite auto-creates the file)."""
+    """Create all tables and perform safe additive column migrations if needed."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Safe migration for sqlite to ensure new columns exist
+        if settings.DATABASE_URL.startswith("sqlite"):
+            tables_to_columns = {
+                "athlete_profiles": [
+                    ("discipline", "TEXT"),
+                    ("primary_role", "TEXT"),
+                    ("sub_role", "TEXT"),
+                    ("secondary_role", "TEXT"),
+                    ("development_objectives", "JSON"),
+                ],
+                "movement_assessments": [
+                    ("protocol_id", "TEXT"),
+                    ("overall_movement_quality", "FLOAT"),
+                    ("metric_details", "JSON"),
+                    ("quality_report", "JSON"),
+                    ("error_details", "JSON"),
+                ],
+                "bottleneck_reports": [
+                    ("strengths", "JSON"),
+                    ("proficient", "JSON"),
+                    ("development_areas", "JSON"),
+                    ("critical_bottlenecks", "JSON"),
+                ],
+                "progress_logs": [
+                    ("workload_index", "FLOAT"),
+                    ("exercises_completed", "JSON"),
+                ],
+            }
+            for table, cols in tables_to_columns.items():
+                try:
+                    res = await conn.execute(text(f"PRAGMA table_info({table});"))
+                    existing_cols = {row[1] for row in res.fetchall()}
+                    for col_name, col_type in cols:
+                        if col_name not in existing_cols:
+                            await conn.execute(
+                                text(
+                                    f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type};"
+                                )
+                            )
+                except Exception:
+                    pass

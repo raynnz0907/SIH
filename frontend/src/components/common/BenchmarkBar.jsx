@@ -2,98 +2,117 @@ import React from 'react';
 
 /**
  * BenchmarkBar
- * Precision telemetry component displaying an athlete's biomechanical metric
- * compared against the elite role benchmark target.
- *
- * Props:
- * - name: string (e.g., "Knee Stability", "Pelvic Tilt Range")
- * - score: number (0 - 100)
- * - benchmark: number (0 - 100)
- * - gap: number (optional delta, e.g. -12 or +8)
- * - tier: 'bottleneck' | 'dev_area' | 'proficient' | 'strength'
+ * 
+ * Reusable visual comparison between an athlete's measured score and their role target.
+ * Uses existing Sportify values only (score, benchmark, gap, tier category).
+ * Does NOT invent new classification logic or scores.
+ * 
+ * @param {string} name - Attribute display name (e.g. "Plant Knee Stability")
+ * @param {number} score - Athlete's current measured score (0-100)
+ * @param {number} benchmark - Role target baseline (0-100)
+ * @param {number} [gap] - Difference from benchmark (e.g. -6 or +8)
+ * @param {string} [tier] - Sportify authoritative category ('bottleneck' | 'dev_area' | 'proficient' | 'strength')
+ * @param {string} [subtitle] - Optional short context (e.g. "Eccentric Stability")
  */
 export default function BenchmarkBar({
   name,
   score = 0,
   benchmark = 75,
   gap,
-  tier = 'proficient',
+  tier,
+  subtitle,
+  className = '',
 }) {
-  const calculatedGap = gap !== undefined ? gap : Math.round(score - benchmark);
-  const clampedScore = Math.max(0, Math.min(100, score));
-  const clampedBenchmark = Math.max(0, Math.min(100, benchmark));
+  const numericScore = Math.max(0, Math.min(100, Math.round(score)));
+  const numericBench = Math.max(0, Math.min(100, Math.round(benchmark)));
+  const calculatedGap = gap !== undefined ? gap : Math.round(numericScore - numericBench);
 
-  // Determine tier semantics and styling
-  const tierConfig = {
-    bottleneck: {
-      label: `${calculatedGap < 0 ? calculatedGap : `-${calculatedGap}`} pts`,
-      badgeClass: 'bg-rose-500/10 text-rose-400 border border-rose-500/25',
-      fillClass: 'bg-gradient-to-r from-rose-600 to-rose-400',
-      dotClass: 'bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.6)]',
-    },
-    dev_area: {
-      label: `${calculatedGap <= 0 ? calculatedGap : `-${calculatedGap}`} pts`,
-      badgeClass: 'bg-amber-500/10 text-amber-400 border border-amber-500/25',
-      fillClass: 'bg-gradient-to-r from-amber-600 to-amber-400',
-      dotClass: 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.6)]',
-    },
-    proficient: {
-      label: 'Target met',
-      badgeClass: 'bg-slate-800/60 text-slate-300 border border-slate-700/50',
-      fillClass: 'bg-gradient-to-r from-slate-500 to-slate-200',
-      dotClass: 'bg-slate-300 shadow-[0_0_8px_rgba(203,213,225,0.4)]',
-    },
-    strength: {
-      label: `+${Math.abs(calculatedGap)} pts`,
-      badgeClass: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25',
-      fillClass: 'bg-gradient-to-r from-emerald-600 to-emerald-400',
-      dotClass: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]',
-    },
+  // Authoritative Sportify color coding
+  const getStatusTheme = () => {
+    if (tier === 'bottleneck' || tier === 'critical') {
+      return {
+        bar: 'bg-rose-500',
+        badge: 'text-rose-400 bg-rose-500/10 border-rose-500/25',
+        label: calculatedGap < 0 ? `${calculatedGap} pts` : `-${Math.abs(calculatedGap)} pts`,
+      };
+    }
+    if (tier === 'dev_area' || tier === 'development_areas') {
+      return {
+        bar: 'bg-amber-400',
+        badge: 'text-amber-400 bg-amber-500/10 border-amber-500/25',
+        label: calculatedGap < 0 ? `${calculatedGap} pts` : `-${Math.abs(calculatedGap)} pts`,
+      };
+    }
+    if (tier === 'strength' || tier === 'strengths') {
+      return {
+        bar: 'bg-emerald-400',
+        badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25',
+        label: `+${Math.abs(calculatedGap)} pts`,
+      };
+    }
+    // Default / Proficient / On Target
+    const isTargetMet = numericScore >= numericBench;
+    return {
+      bar: isTargetMet ? 'bg-slate-200' : 'bg-amber-400',
+      badge: isTargetMet
+        ? 'text-slate-300 bg-white/[0.05] border-white/10'
+        : 'text-amber-400 bg-amber-500/10 border-amber-500/25',
+      label: isTargetMet ? 'Target met' : `${calculatedGap} pts`,
+    };
   };
 
-  const currentConfig = tierConfig[tier] || tierConfig.proficient;
+  const theme = getStatusTheme();
 
   return (
-    <div className="w-full space-y-1.5 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/10 transition-colors">
-      {/* Header Info */}
+    <div className={`space-y-1.5 ${className}`}>
+      {/* Header Row: Attribute Name & Gap Badge */}
       <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <span className="font-sans font-medium text-slate-200 tracking-tight text-[13px]">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="font-heading font-bold text-slate-200 truncate capitalize text-[13px]">
             {name}
           </span>
-          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${currentConfig.badgeClass}`}>
-            {currentConfig.label}
+          {subtitle && (
+            <span className="text-[11px] text-slate-400 font-sans truncate hidden sm:inline">
+              {subtitle}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="font-mono font-bold text-slate-200 text-xs">
+            {numericScore}
+            <span className="text-slate-500 font-normal text-[10px]"> / 100</span>
+          </span>
+          <span
+            className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${theme.badge}`}
+          >
+            {theme.label}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 font-mono text-[11px]">
-          <span className="font-bold text-white text-xs">{clampedScore}</span>
-          <span className="text-slate-500">/</span>
-          <span className="text-slate-400">{clampedBenchmark} target</span>
-        </div>
       </div>
 
-      {/* Bar Track */}
-      <div className="relative h-2 w-full bg-white/[0.06] rounded-full overflow-visible">
-        {/* Athlete Score Fill */}
+      {/* Visual Benchmark Track */}
+      <div className="relative h-2 w-full rounded-full bg-white/[0.06] overflow-visible">
+        {/* Measured Score Bar */}
         <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${currentConfig.fillClass}`}
-          style={{ width: `${clampedScore}%` }}
+          className={`h-full rounded-full transition-all duration-500 ${theme.bar}`}
+          style={{ width: `${numericScore}%` }}
         />
 
-        {/* Benchmark Overlay Tick Indicator */}
+        {/* Role Target Marker Line */}
         <div
-          className="absolute -top-1 bottom-[-4px] w-[2px] bg-white z-10 shadow-[0_0_6px_rgba(255,255,255,0.9)]"
-          style={{ left: `${clampedBenchmark}%` }}
-          title={`Role Benchmark: ${clampedBenchmark}`}
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-white -ml-[2px] -top-1 absolute" />
-        </div>
+          className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3.5 bg-white/70 rounded-full z-10 pointer-events-none"
+          style={{ left: `${numericBench}%` }}
+          title={`Role Target: ${numericBench}`}
+        />
       </div>
 
-      {/* Benchmark Tick Label underneath */}
-      <div className="flex justify-between text-[9px] font-mono text-slate-500 px-0.5 pt-0.5">
+      {/* Target Marker Sublabel */}
+      <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 pt-0.5">
         <span>0</span>
-        <span style={{ marginLeft: `${Math.max(5, clampedBenchmark - 8)}%` }}>Target {clampedBenchmark}</span>
+        <span style={{ marginLeft: `${Math.max(5, Math.min(85, numericBench - 10))}%` }}>
+          Target: {numericBench}
+        </span>
         <span>100</span>
       </div>
     </div>

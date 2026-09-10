@@ -29,5 +29,5 @@ export default function VideoCapture() {
     }
   }
 
-  return <Navigate to="/assessment/cricket" replace />;
+  return <Navigate to="/onboarding?mode=complete-profile" replace />;
 }
