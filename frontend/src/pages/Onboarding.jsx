@@ -145,18 +145,11 @@ export default function Onboarding() {
       try {
         const existingProfile = await intakeAPI.getProfile();
         login(me, token, existingProfile);
-
-        navigate('/dashboard');
       } catch (profileErr) {
-        if (profileErr.response?.status === 404) {
-          login(me, token, null);
-          setSearchParams({ mode: 'complete-profile' });
-          setStep(1);
-          setError('Welcome back! Please complete your athlete profile configuration.');
-        } else {
-          throw profileErr;
-        }
+        login(me, token, null);
       }
+
+      navigate('/dashboard');
     } catch (err) {
       setError(
         err.response?.data?.detail ||
@@ -210,8 +203,7 @@ export default function Onboarding() {
       login(me || { email: authData.email }, token, savedProfile);
       setProfile(savedProfile);
 
-      const targetSport = normalizeSport(savedProfile?.sport || profileData.sport);
-      navigate(`/assessment/${targetSport || 'cricket'}`);
+      navigate('/dashboard');
     } catch (err) {
       setError(
         err.response?.data?.detail ||
