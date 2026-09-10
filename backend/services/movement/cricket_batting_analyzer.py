@@ -14,7 +14,9 @@ class CricketBattingAnalyzer(MovementProtocol):
     name = "Cricket Batting Drive Assessment"
     # Shoulders (11,12), Elbows (13,14), Wrists (15,16), Hips (23,24), Knees (25,26), Ankles (27,28)
     required_landmarks = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]
-    min_usable_frames = 20
+    min_usable_frames = 12
+    min_visibility_threshold = 0.35
+    min_landmark_coverage_ratio = 0.70
 
     def analyze(
         self,
@@ -39,7 +41,7 @@ class CricketBattingAnalyzer(MovementProtocol):
         # Determine batting stance side (right-handed vs left-handed based on initial facing direction)
         initial_frame = landmarks_sequence[0]
         # In a right-handed batter facing the bowler, left shoulder (11) and left knee (25) lead
-        left_lead = initial_frame[11][0] < initial_frame[12][0]
+        left_lead = initial_frame.get(11, [0, 0, 0, 0])[0] < initial_frame.get(12, [1, 0, 0, 0])[0]
         lead_s_idx, rear_s_idx = (11, 12) if left_lead else (12, 11)
         lead_e_idx, rear_e_idx = (13, 14) if left_lead else (14, 13)
         lead_w_idx, rear_w_idx = (15, 16) if left_lead else (16, 15)
@@ -48,12 +50,12 @@ class CricketBattingAnalyzer(MovementProtocol):
         lead_h_idx, rear_h_idx = (23, 24) if left_lead else (24, 23)
 
         for i, frame in enumerate(landmarks_sequence):
-            ls = frame[lead_s_idx]
-            le = frame[lead_e_idx]
-            lw = frame[lead_w_idx]
-            lh = frame[lead_h_idx]
-            lk = frame[lead_k_idx]
-            la = frame[lead_a_idx]
+            ls = frame.get(lead_s_idx, [0.5, 0.2, 0.0, 1.0])
+            le = frame.get(lead_e_idx, ls)
+            lw = frame.get(lead_w_idx, le)
+            lh = frame.get(lead_h_idx, [0.5, 0.5, 0.0, 1.0])
+            lk = frame.get(lead_k_idx, lh)
+            la = frame.get(lead_a_idx, lk)
             nose = frame.get(0, ls)
 
             # Lead elbow angle (Shoulder - Elbow - Wrist)

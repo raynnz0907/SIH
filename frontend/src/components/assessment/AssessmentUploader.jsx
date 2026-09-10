@@ -89,10 +89,11 @@ export default function AssessmentUploader({
         throw new Error('No job ID returned from assessment server.');
       }
 
-      // Visual progress progression while waiting for CV pipeline
+      // Visual progress progression while waiting for CV and AI pipeline
       setStage('quality_gate');
       const stageTimer1 = setTimeout(() => setStage('analyzing'), 2500);
       const stageTimer2 = setTimeout(() => setStage('preparing'), 6000);
+      const stageTimer3 = setTimeout(() => setStage('ai_coaching'), 12000);
 
       // Start polling backend job status
       pollTimerRef.current = setInterval(async () => {
@@ -103,6 +104,7 @@ export default function AssessmentUploader({
             clearTimeout(timeoutTimerRef.current);
             clearTimeout(stageTimer1);
             clearTimeout(stageTimer2);
+            clearTimeout(stageTimer3);
 
             setAssessment(statusRes);
             if (statusRes.bottlenecks) setBottlenecks(statusRes.bottlenecks);
@@ -112,6 +114,7 @@ export default function AssessmentUploader({
             clearTimeout(timeoutTimerRef.current);
             clearTimeout(stageTimer1);
             clearTimeout(stageTimer2);
+            clearTimeout(stageTimer3);
             setStage('idle');
             setErrorMsg(
               statusRes.message ||
@@ -123,16 +126,17 @@ export default function AssessmentUploader({
         }
       }, 1500);
 
-      // Timeout guard after 50 seconds
+      // Timeout guard after 120 seconds
       timeoutTimerRef.current = setTimeout(() => {
         clearInterval(pollTimerRef.current);
         clearTimeout(stageTimer1);
         clearTimeout(stageTimer2);
+        clearTimeout(stageTimer3);
         if (stage !== 'idle') {
           setStage('idle');
           setErrorMsg('Analysis timed out. Please verify local vision processing service.');
         }
-      }, 50000);
+      }, 120000);
     } catch (err) {
       setStage('idle');
       setErrorMsg(
@@ -152,9 +156,11 @@ export default function AssessmentUploader({
       case 'analyzing':
         return 'Analyzing movement kinematics and joint angles...';
       case 'preparing':
-        return 'Preparing coaching feedback and benchmark comparisons...';
+        return 'Evaluating movement benchmarks and phase mechanics...';
+      case 'ai_coaching':
+        return 'Synthesizing personalized AI coaching advice...';
       default:
-        return 'Processing...';
+        return 'Processing movement assessment...';
     }
   };
 
