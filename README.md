@@ -1,4 +1,4 @@
-# Sportify (Athletiq) - Personalized Athlete Development Platform
+# Sportify - Personalized Athlete Development Platform
 
 > **Train for what your game demands.**
 
