@@ -180,30 +180,7 @@ npm run dev
 
 ---
 
-## Environment Configuration
 
-In ackend/.env:
-
-`env
-# Database: SQLite (default) or PostgreSQL
-DATABASE_URL=sqlite+aiosqlite:///./athletiq.db
-
-# Authentication Security
-SECRET_KEY=sportify-super-secret-key-min-32-characters-long
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
-
-# Google Gemini API
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3.6-flash
-GEMINI_FALLBACK_MODEL=gemini-2.0-flash
-
-# Media Storage
-UPLOAD_DIR=./uploads
-MAX_VIDEO_SIZE_MB=100
-`
-
----
 
 ## User Journey
 
